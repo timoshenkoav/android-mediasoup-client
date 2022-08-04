@@ -12,7 +12,9 @@
 
 #include "base/base_export.h"
 #include "base/callback.h"
+#include "base/location.h"
 #include "base/macros.h"
+#include "base/tracing_buildflags.h"
 
 namespace base {
 
@@ -35,40 +37,51 @@ namespace base {
 //    }
 //
 //    // Start listening.
-//    MemoryPressureListener* my_listener =
-//        new MemoryPressureListener(base::Bind(&OnMemoryPressure));
+//    auto listener = std::make_unique<MemoryPressureListener>(
+//        base::BindRepeating(&OnMemoryPressure));
 //
 //    ...
 //
 //    // Stop listening.
-//    delete my_listener;
+//    listener.reset();
 //
 class BASE_EXPORT MemoryPressureListener {
  public:
   // A Java counterpart will be generated for this enum.
+  // The values needs to be kept in sync with the MemoryPressureLevel entry in
+  // enums.xml.
   // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.base
+  // GENERATED_JAVA_PREFIX_TO_STRIP: MEMORY_PRESSURE_LEVEL_
   enum MemoryPressureLevel {
     // No problems, there is enough memory to use. This event is not sent via
     // callback, but the enum is used in other places to find out the current
     // state of the system.
-    MEMORY_PRESSURE_LEVEL_NONE,
+    MEMORY_PRESSURE_LEVEL_NONE = 0,
 
     // Modules are advised to free buffers that are cheap to re-allocate and not
     // immediately needed.
-    MEMORY_PRESSURE_LEVEL_MODERATE,
+    MEMORY_PRESSURE_LEVEL_MODERATE = 1,
 
     // At this level, modules are advised to free all possible memory.  The
     // alternative is to be killed by the system, which means all memory will
     // have to be re-created, plus the cost of a cold start.
-    MEMORY_PRESSURE_LEVEL_CRITICAL,
+    MEMORY_PRESSURE_LEVEL_CRITICAL = 2,
+
+    // This must be the last value in the enum. The casing is different from the
+    // other values to make this enum work well with the
+    // UMA_HISTOGRAM_ENUMERATION macro.
+    kMaxValue = MEMORY_PRESSURE_LEVEL_CRITICAL,
   };
 
-  typedef Callback<void(MemoryPressureLevel)> MemoryPressureCallback;
-  typedef Callback<void(MemoryPressureLevel)> SyncMemoryPressureCallback;
+  using MemoryPressureCallback = RepeatingCallback<void(MemoryPressureLevel)>;
+  using SyncMemoryPressureCallback =
+      RepeatingCallback<void(MemoryPressureLevel)>;
 
-  explicit MemoryPressureListener(
+  MemoryPressureListener(
+      const base::Location& creation_location,
       const MemoryPressureCallback& memory_pressure_callback);
   MemoryPressureListener(
+      const base::Location& creation_location,
       const MemoryPressureCallback& memory_pressure_callback,
       const SyncMemoryPressureCallback& sync_memory_pressure_callback);
 
@@ -93,6 +106,8 @@ class BASE_EXPORT MemoryPressureListener {
 
   MemoryPressureCallback callback_;
   SyncMemoryPressureCallback sync_memory_pressure_callback_;
+
+  const base::Location creation_location_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryPressureListener);
 };

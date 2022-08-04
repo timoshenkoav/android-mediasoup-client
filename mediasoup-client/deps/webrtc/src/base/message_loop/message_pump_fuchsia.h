@@ -32,7 +32,7 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump,
                                      zx_signals_t signals) = 0;
 
    protected:
-    virtual ~ZxHandleWatcher() {}
+    virtual ~ZxHandleWatcher() = default;
   };
 
   // Manages an active watch on an zx_handle_t.
@@ -52,6 +52,8 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump,
     friend class MessagePumpFuchsia;
 
     virtual bool WaitBegin();
+
+    bool is_active() const { return async_wait_t::handler != nullptr; }
 
     static void HandleSignal(async_dispatcher_t* async,
                              async_wait_t* wait,
@@ -105,7 +107,8 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump,
     int fd_ = -1;
     uint32_t desired_events_ = 0;
 
-    // Set by WatchFileDescriptor to hold a reference to the descriptor's mxio.
+    // Set by WatchFileDescriptor() to hold a reference to the descriptor's
+    // fdio.
     fdio_t* io_ = nullptr;
 
     DISALLOW_COPY_AND_ASSIGN(FdWatchController);
@@ -138,17 +141,14 @@ class BASE_EXPORT MessagePumpFuchsia : public MessagePump,
   void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
 
  private:
-  // Handles IO events by running |async_dispatcher_|. Returns true if any
-  // events were received or if ScheduleWork() was called.
-  bool HandleEvents(zx_time_t deadline);
+  // Handles IO events by running |async_dispatcher_| until |deadline|. Returns
+  // true if any events were received or if ScheduleWork() was called.
+  bool HandleIoEventsUntil(zx_time_t deadline);
 
   // This flag is set to false when Run should return.
   bool keep_running_ = true;
 
   std::unique_ptr<async::Loop> async_loop_;
-
-  // The time at which we should call DoDelayedWork.
-  TimeTicks delayed_work_time_;
 
   base::WeakPtrFactory<MessagePumpFuchsia> weak_factory_;
 

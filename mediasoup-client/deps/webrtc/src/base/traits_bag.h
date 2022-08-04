@@ -10,7 +10,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "base/optional.h"
+#include "base/parameter_pack.h"
+#include "base/template_util.h"
+#include "third_party/abseil-cpp/absl/types/optional.h"
 
 // A bag of Traits (structs / enums / etc...) can be an elegant alternative to
 // the builder pattern and multiple default arguments for configuring things.
@@ -46,51 +48,15 @@
 //                 trait_helpers::AreValidTraits<ValidTraits,
 //                                               ArgTypes...>::value>>
 //   constexpr void DoSomethingAwesome(ArgTypes... args)
-//      : enable_feature_x(trait_helpers::HasTrait<EnableFeatureX>(args...)),
+//      : enable_feature_x(
+//            trait_helpers::HasTrait<EnableFeatureX, ArgTypes...>()),
 //        color(trait_helpers::GetEnum<Color, EnumTraitA::BLUE>(args...)) {}
 
 namespace base {
 namespace trait_helpers {
 
-// Checks if any of the elements in |ilist| is true.
-// Similar to std::any_of for the case of constexpr initializer_list.
-inline constexpr bool any_of(std::initializer_list<bool> ilist) {
-  for (auto c : ilist) {
-    if (c)
-      return true;
-  }
-  return false;
-}
-
-// Checks if all of the elements in |ilist| are true.
-// Similar to std::any_of for the case of constexpr initializer_list.
-inline constexpr bool all_of(std::initializer_list<bool> ilist) {
-  for (auto c : ilist) {
-    if (!c)
-      return false;
-  }
-  return true;
-}
-
-// Counts the elements in |ilist| that are equal to |value|.
-// Similar to std::count for the case of constexpr initializer_list.
-template <class T>
-inline constexpr size_t count(std::initializer_list<T> ilist, T value) {
-  size_t c = 0;
-  for (const auto& v : ilist) {
-    c += (v == value);
-  }
-  return c;
-}
-
 // Represents a trait that has been removed by a predicate.
 struct EmptyTrait {};
-
-// Checks if |Type| occurs in the parameter pack.
-template <typename Type, typename... Pack>
-struct TypeInPack {
-  static constexpr auto value = any_of({std::is_same<Type, Pack>::value...});
-};
 
 // Predicate used to remove any traits from the given list of types by
 // converting them to EmptyTrait. E.g.
@@ -107,16 +73,16 @@ struct TypeInPack {
 // which isn't worth the complexity over ignoring EmptyTrait.
 template <typename... TraitsToExclude>
 struct Exclude {
-  template <
-      typename T,
-      std::enable_if_t<TypeInPack<T, TraitsToExclude...>::value>* = nullptr>
+  template <typename T,
+            std::enable_if_t<ParameterPack<
+                TraitsToExclude...>::template HasType<T>::value>* = nullptr>
   static constexpr EmptyTrait Filter(T t) {
     return EmptyTrait();
   }
 
-  template <
-      typename T,
-      std::enable_if_t<!TypeInPack<T, TraitsToExclude...>::value>* = nullptr>
+  template <typename T,
+            std::enable_if_t<!ParameterPack<
+                TraitsToExclude...>::template HasType<T>::value>* = nullptr>
   static constexpr T Filter(T t) {
     return t;
   }
@@ -216,11 +182,11 @@ struct EnumTraitFilter : public BasicTraitFilter<ArgType> {
 
 template <typename ArgType>
 struct OptionalEnumTraitFilter
-    : public BasicTraitFilter<ArgType, Optional<ArgType>> {
+    : public BasicTraitFilter<ArgType, absl::optional<ArgType>> {
   constexpr OptionalEnumTraitFilter()
-      : BasicTraitFilter<ArgType, Optional<ArgType>>(nullopt) {}
+      : BasicTraitFilter<ArgType, absl::optional<ArgType>>(absl::nullopt) {}
   constexpr OptionalEnumTraitFilter(ArgType arg)
-      : BasicTraitFilter<ArgType, Optional<ArgType>>(arg) {}
+      : BasicTraitFilter<ArgType, absl::optional<ArgType>>(arg) {}
 };
 
 // Tests whether multiple given argtument types are all valid traits according
@@ -233,10 +199,8 @@ struct RequiredEnumTraitFilter : public BasicTraitFilter<ArgType> {
 
 // Note EmptyTrait is always regarded as valid to support filtering.
 template <class ValidTraits, class T>
-inline constexpr bool IsValidTrait() {
-  return std::is_constructible<ValidTraits, T>::value ||
-         std::is_same<T, EmptyTrait>::value;
-}
+using IsValidTrait = disjunction<std::is_constructible<ValidTraits, T>,
+                                 std::is_same<T, EmptyTrait>>;
 
 // Tests whether a given trait type is valid or invalid by testing whether it is
 // convertible to the provided ValidTraits type. To use, define a ValidTraits
@@ -255,11 +219,8 @@ inline constexpr bool IsValidTrait() {
 //   ...
 // };
 template <class ValidTraits, class... ArgTypes>
-struct AreValidTraits
-    : std::integral_constant<bool,
-                             all_of(
-                                 {IsValidTrait<ValidTraits, ArgTypes>()...})> {
-};
+using AreValidTraits =
+    bool_constant<all_of({IsValidTrait<ValidTraits, ArgTypes>::value...})>;
 
 // Helper to make getting an enum from a trait more readable.
 template <typename Enum, typename... Args>
@@ -276,18 +237,17 @@ static constexpr Enum GetEnum(Args... args) {
 // Helper to make getting an optional enum from a trait with a default more
 // readable.
 template <typename Enum, typename... Args>
-static constexpr Optional<Enum> GetOptionalEnum(Args... args) {
+static constexpr absl::optional<Enum> GetOptionalEnum(Args... args) {
   return GetTraitFromArgList<OptionalEnumTraitFilter<Enum>>(args...);
 }
 
 // Helper to make checking for the presence of a trait more readable.
 template <typename Trait, typename... Args>
-static constexpr bool HasTrait(Args... args) {
+struct HasTrait : ParameterPack<Args...>::template HasType<Trait> {
   static_assert(
       count({std::is_constructible<Trait, Args>::value...}, true) <= 1,
       "The traits bag contains multiple traits of the same type.");
-  return TypeInPack<Trait, Args...>::value;
-}
+};
 
 // If you need a template vararg constructor to delegate to a private
 // constructor, you may need to add this to the private constructor to ensure

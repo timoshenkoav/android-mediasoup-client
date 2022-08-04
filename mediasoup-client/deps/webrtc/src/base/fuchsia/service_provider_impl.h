@@ -9,22 +9,31 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 #include <string>
 
 #include "base/base_export.h"
 #include "base/callback.h"
-#include "base/fuchsia/service_directory_client.h"
 #include "base/macros.h"
 
+namespace sys {
+class OutgoingDirectory;
+}  // namespace sys
+
 namespace base {
-namespace fuchsia {
 
 // Implementation of the legacy sys.ServiceProvider interface which delegates
 // requests to an underlying fuchsia.io.Directory of services.
-// TODO(https://crbug.com/920920): Remove this when ServiceProvider is gone.
+// TODO(https://crbug.com/1065707): Remove this when it is no longer required
+// by the //fuchsia/base AgentImpl.
 class BASE_EXPORT ServiceProviderImpl : public ::fuchsia::sys::ServiceProvider {
  public:
+  // Constructor that creates ServiceProvider for public services in the
+  // specified OutgoingDirectory.
+  static std::unique_ptr<ServiceProviderImpl> CreateForOutgoingDirectory(
+      sys::OutgoingDirectory* outgoing_directory);
+
   explicit ServiceProviderImpl(
       fidl::InterfaceHandle<::fuchsia::io::Directory> service_directory);
   ~ServiceProviderImpl() override;
@@ -37,6 +46,9 @@ class BASE_EXPORT ServiceProviderImpl : public ::fuchsia::sys::ServiceProvider {
   void SetOnLastClientDisconnectedClosure(
       base::OnceClosure on_last_client_disconnected);
 
+  // Returns true if one or more clients are connected.
+  bool has_clients() const { return bindings_.size() != 0; }
+
  private:
   // fuchsia::sys::ServiceProvider implementation.
   void ConnectToService(std::string service_name,
@@ -44,14 +56,13 @@ class BASE_EXPORT ServiceProviderImpl : public ::fuchsia::sys::ServiceProvider {
 
   void OnBindingSetEmpty();
 
-  const ServiceDirectoryClient directory_;
+  const sys::ServiceDirectory directory_;
   fidl::BindingSet<::fuchsia::sys::ServiceProvider> bindings_;
   base::OnceClosure on_last_client_disconnected_;
 
   DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
-}  // namespace fuchsia
 }  // namespace base
 
 #endif  // BASE_FUCHSIA_SERVICE_PROVIDER_IMPL_H_

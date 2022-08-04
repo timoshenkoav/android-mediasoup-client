@@ -10,7 +10,6 @@
 
 #include "base/base_export.h"
 #include "base/callback_forward.h"
-#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 
 namespace base {
@@ -19,13 +18,18 @@ struct FakeBindState;
 
 namespace internal {
 
-class CallbackBase;
-class CallbackBaseCopyable;
-
 class BindStateBase;
+class FinallyExecutorCommon;
+class ThenAndCatchExecutorCommon;
+
+template <typename ReturnType>
+class PostTaskExecutor;
 
 template <typename Functor, typename... BoundArgs>
 struct BindState;
+
+class CallbackBase;
+class CallbackBaseCopyable;
 
 struct BindStateBaseRefCountTraits {
   static void Destruct(const BindStateBase*);
@@ -40,11 +44,10 @@ using PassingType = std::conditional_t<std::is_scalar<T>::value, T, T&&>;
 // DoInvoke function to perform the function execution.  This allows
 // us to shield the Callback class from the types of the bound argument via
 // "type erasure."
-// At the base level, the only task is to add reference counting data. Don't use
-// RefCountedThreadSafe since it requires the destructor to be a virtual method.
-// Creating a vtable for every BindState template instantiation results in a lot
-// of bloat. Its only task is to call the destructor which can be done with a
-// function pointer.
+// At the base level, the only task is to add reference counting data. Avoid
+// using or inheriting any virtual functions. Creating a vtable for every
+// BindState template instantiation results in a lot of bloat. Its only task is
+// to call the destructor which can be done with a function pointer.
 class BASE_EXPORT BindStateBase
     : public RefCountedThreadSafe<BindStateBase, BindStateBaseRefCountTraits> {
  public:
@@ -56,6 +59,9 @@ class BASE_EXPORT BindStateBase
   };
 
   using InvokeFuncStorage = void(*)();
+
+  BindStateBase(const BindStateBase&) = delete;
+  BindStateBase& operator=(const BindStateBase&) = delete;
 
  private:
   BindStateBase(InvokeFuncStorage polymorphic_invoke,
@@ -73,7 +79,7 @@ class BASE_EXPORT BindStateBase
   friend class CallbackBase;
   friend class CallbackBaseCopyable;
 
-  // Whitelist subclasses that access the destructor of BindStateBase.
+  // Allowlist subclasses that access the destructor of BindStateBase.
   template <typename Functor, typename... BoundArgs>
   friend struct BindState;
   friend struct ::base::FakeBindState;
@@ -96,8 +102,6 @@ class BASE_EXPORT BindStateBase
   void (*destructor_)(const BindStateBase*);
   bool (*query_cancellation_traits_)(const BindStateBase*,
                                      CancellationQueryMode mode);
-
-  DISALLOW_COPY_AND_ASSIGN(BindStateBase);
 };
 
 // Holds the Callback methods that don't require specialization to reduce
@@ -135,6 +139,12 @@ class BASE_EXPORT CallbackBase {
   void Reset();
 
  protected:
+  friend class FinallyExecutorCommon;
+  friend class ThenAndCatchExecutorCommon;
+
+  template <typename ReturnType>
+  friend class PostTaskExecutor;
+
   using InvokeFuncStorage = BindStateBase::InvokeFuncStorage;
 
   // Returns true if this callback equals |other|. |other| may be null.
@@ -176,6 +186,60 @@ class BASE_EXPORT CallbackBaseCopyable : public CallbackBase {
   explicit CallbackBaseCopyable(BindStateBase* bind_state)
       : CallbackBase(bind_state) {}
   ~CallbackBaseCopyable() = default;
+};
+
+// Helpers for the `Then()` implementation.
+template <typename OriginalCallback, typename ThenCallback>
+struct ThenHelper;
+
+// Specialization when original callback returns `void`.
+template <template <typename> class OriginalCallback,
+          template <typename>
+          class ThenCallback,
+          typename... OriginalArgs,
+          typename ThenR,
+          typename... ThenArgs>
+struct ThenHelper<OriginalCallback<void(OriginalArgs...)>,
+                  ThenCallback<ThenR(ThenArgs...)>> {
+  static_assert(sizeof...(ThenArgs) == 0,
+                "|then| callback cannot accept parameters if |this| has a "
+                "void return type.");
+
+  static auto CreateTrampoline() {
+    return [](OriginalCallback<void(OriginalArgs...)> c1,
+              ThenCallback<ThenR(ThenArgs...)> c2, OriginalArgs... c1_args) {
+      std::move(c1).Run(std::forward<OriginalArgs>(c1_args)...);
+      return std::move(c2).Run();
+    };
+  }
+};
+
+// Specialization when original callback returns a non-void type.
+template <template <typename> class OriginalCallback,
+          template <typename>
+          class ThenCallback,
+          typename OriginalR,
+          typename... OriginalArgs,
+          typename ThenR,
+          typename... ThenArgs>
+struct ThenHelper<OriginalCallback<OriginalR(OriginalArgs...)>,
+                  ThenCallback<ThenR(ThenArgs...)>> {
+  static_assert(sizeof...(ThenArgs) == 1,
+                "|then| callback must accept exactly one parameter if |this| "
+                "has a non-void return type.");
+  // TODO(dcheng): This should probably check is_convertible as well (same with
+  // `AssertBindArgsValidity`).
+  static_assert(std::is_constructible<ThenArgs..., OriginalR&&>::value,
+                "|then| callback's parameter must be constructible from "
+                "return type of |this|.");
+
+  static auto CreateTrampoline() {
+    return [](OriginalCallback<OriginalR(OriginalArgs...)> c1,
+              ThenCallback<ThenR(ThenArgs...)> c2, OriginalArgs... c1_args) {
+      return std::move(c2).Run(
+          std::move(c1).Run(std::forward<OriginalArgs>(c1_args)...));
+    };
+  }
 };
 
 }  // namespace internal
