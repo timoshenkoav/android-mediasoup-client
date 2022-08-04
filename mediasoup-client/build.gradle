@@ -65,16 +65,16 @@ dependencies {
 //    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
 //    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 }
-//afterEvaluate {
-//    publishing {
-//        publications {
-//            // Creates a Maven publication called "release".
-//            release(MavenPublication) {
-//                from components.release
-//                ersion = System.getenv("VERSION") ?: "0"
-//                group = System.getenv("GROUP") ?: "com.mediasoup"
-//                artifactId = 'android'
-//            }
-//        }
-//    }
-//}
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.release
+                version = System.getenv("VERSION") ?: "0"
+                group = System.getenv("GROUP") ?: "com.mediasoup"
+                artifactId = 'android'
+            }
+        }
+    }
+}
