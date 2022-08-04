@@ -1,0 +1,7 @@
+jdk:
+  - openjdk11
+before_install:
+  - git lfs pull
+install:
+  - echo "Running a custom install command"
+  - ./gradlew clean build publishToMavenLocal
