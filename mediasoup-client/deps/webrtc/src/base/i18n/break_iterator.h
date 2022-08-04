@@ -7,16 +7,18 @@
 
 #include <stddef.h>
 
+#include <string>
+
 #include "base/i18n/base_i18n_export.h"
 #include "base/macros.h"
-#include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 
 // The BreakIterator class iterates through the words, word breaks, and
 // line breaks in a UTF-16 string.
 //
-// It provides several modes, BREAK_WORD, BREAK_LINE, and BREAK_NEWLINE,
-// which modify how characters are aggregated into the returned string.
+// It provides several modes, BREAK_WORD, BREAK_LINE, BREAK_NEWLINE, and
+// BREAK_SENTENCE which modify how characters are aggregated into the returned
+// string.
 //
 // Under BREAK_WORD mode, once a word is encountered any non-word
 // characters are not included in the returned string (e.g. in the
@@ -42,6 +44,12 @@
 // string, breaking only when a newline-equivalent character is encountered
 // (eg. in the UTF-16 equivalent of the string "foo\nbar!\n\n", the line
 // breaks are at the periods in ".foo\n.bar\n.\n.").
+//
+// Under BREAK_SENTENCE mode, all characters are included in the returned
+// string, breaking only on sentence boundaries defined in "Unicode Standard
+// Annex #29: Text Segmentation." Whitespace immediately following the sentence
+// is also included. For example, in the UTF-16 equivalent of the string
+// "foo bar! baz qux?" the breaks are at the periods in ".foo bar! .baz quz?."
 //
 // To extract the words from a string, move a BREAK_WORD BreakIterator
 // through the string and test whether IsWord() is true. E.g.,
@@ -71,6 +79,7 @@ class BASE_I18N_EXPORT BreakIterator {
     BREAK_CHARACTER,
     // But don't remove this one!
     RULE_BASED,
+    BREAK_SENTENCE,
   };
 
   enum WordBreakStatus {
@@ -90,9 +99,9 @@ class BASE_I18N_EXPORT BreakIterator {
   BreakIterator(const StringPiece16& str, BreakType break_type);
   // Make a rule-based iterator. BreakType == RULE_BASED is implied.
   // TODO(andrewhayden): This signature could easily be misinterpreted as
-  // "(const string16& str, const string16& locale)". We should do something
-  // better.
-  BreakIterator(const StringPiece16& str, const string16& rules);
+  // "(const std::u16string& str, const std::u16string& locale)". We should do
+  // something better.
+  BreakIterator(const StringPiece16& str, const std::u16string& rules);
   ~BreakIterator();
 
   // Init() must be called before any of the iterators are valid.
@@ -108,7 +117,7 @@ class BASE_I18N_EXPORT BreakIterator {
   // Updates the text used by the iterator, resetting the iterator as if
   // if Init() had been called again. Any old state is lost. Returns true
   // unless there is an error setting the text.
-  bool SetText(const base::char16* text, const size_t length);
+  bool SetText(const char16_t* text, const size_t length);
 
   // Under BREAK_WORD mode, returns true if the break we just hit is the
   // end of a word. (Otherwise, the break iterator just skipped over e.g.
@@ -131,10 +140,15 @@ class BASE_I18N_EXPORT BreakIterator {
   BreakIterator::WordBreakStatus GetWordBreakStatus() const;
 
   // Under BREAK_WORD mode, returns true if |position| is at the end of word or
-  // at the start of word. It always returns false under BREAK_LINE and
-  // BREAK_NEWLINE modes.
+  // at the start of word. It always returns false under modes that are not
+  // BREAK_WORD or RULE_BASED.
   bool IsEndOfWord(size_t position) const;
   bool IsStartOfWord(size_t position) const;
+
+  // Under BREAK_SENTENCE mode, returns true if |position| is at a sentence
+  // boundary. It always returns false under modes that are not BREAK_SENTENCE
+  // or RULE_BASED.
+  bool IsSentenceBoundary(size_t position) const;
 
   // Under BREAK_CHARACTER mode, returns whether |position| is a Unicode
   // grapheme boundary.
@@ -143,7 +157,7 @@ class BASE_I18N_EXPORT BreakIterator {
   // Returns the string between prev() and pos().
   // Advance() must have been called successfully at least once for pos() to
   // have advanced to somewhere useful.
-  string16 GetString() const;
+  std::u16string GetString() const;
 
   StringPiece16 GetStringPiece() const;
 
@@ -165,7 +179,7 @@ class BASE_I18N_EXPORT BreakIterator {
   StringPiece16 string_;
 
   // Rules for our iterator. Mutually exclusive with break_type_.
-  const string16 rules_;
+  const std::u16string rules_;
 
   // The breaking style (word/space/newline). Mutually exclusive with rules_
   BreakType break_type_;

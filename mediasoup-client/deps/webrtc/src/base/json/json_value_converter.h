@@ -15,7 +15,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 #include "base/values.h"
 
@@ -161,12 +160,12 @@ class BASE_EXPORT BasicValueConverter<std::string>
 };
 
 template <>
-class BASE_EXPORT BasicValueConverter<string16>
-    : public ValueConverter<string16> {
+class BASE_EXPORT BasicValueConverter<std::u16string>
+    : public ValueConverter<std::u16string> {
  public:
   BasicValueConverter() = default;
 
-  bool Convert(const base::Value& value, string16* field) const override;
+  bool Convert(const base::Value& value, std::u16string* field) const override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BasicValueConverter);
@@ -221,9 +220,7 @@ class CustomFieldConverter : public ValueConverter<FieldType> {
       : convert_func_(convert_func) {}
 
   bool Convert(const base::Value& value, FieldType* field) const override {
-    std::string string_value;
-    return value.GetAsString(&string_value) &&
-        convert_func_(string_value, field);
+    return value.is_string() && convert_func_(value.GetString(), field);
   }
 
  private:
@@ -254,25 +251,22 @@ class RepeatedValueConverter
 
   bool Convert(const base::Value& value,
                std::vector<std::unique_ptr<Element>>* field) const override {
-    const base::ListValue* list = NULL;
-    if (!value.GetAsList(&list)) {
+    if (!value.is_list()) {
       // The field is not a list.
       return false;
     }
 
-    field->reserve(list->GetSize());
-    for (size_t i = 0; i < list->GetSize(); ++i) {
-      const base::Value* element = NULL;
-      if (!list->Get(i, &element))
-        continue;
-
-      std::unique_ptr<Element> e(new Element);
-      if (basic_converter_.Convert(*element, e.get())) {
+    field->reserve(value.GetList().size());
+    size_t i = 0;
+    for (const Value& element : value.GetList()) {
+      auto e = std::make_unique<Element>();
+      if (basic_converter_.Convert(element, e.get())) {
         field->push_back(std::move(e));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
       }
+      i++;
     }
     return true;
   }
@@ -290,23 +284,20 @@ class RepeatedMessageConverter
 
   bool Convert(const base::Value& value,
                std::vector<std::unique_ptr<NestedType>>* field) const override {
-    const base::ListValue* list = NULL;
-    if (!value.GetAsList(&list))
+    if (!value.is_list())
       return false;
 
-    field->reserve(list->GetSize());
-    for (size_t i = 0; i < list->GetSize(); ++i) {
-      const base::Value* element = NULL;
-      if (!list->Get(i, &element))
-        continue;
-
-      std::unique_ptr<NestedType> nested(new NestedType);
-      if (converter_.Convert(*element, nested.get())) {
+    field->reserve(value.GetList().size());
+    size_t i = 0;
+    for (const Value& element : value.GetList()) {
+      auto nested = std::make_unique<NestedType>();
+      if (converter_.Convert(element, nested.get())) {
         field->push_back(std::move(nested));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
       }
+      i++;
     }
     return true;
   }
@@ -327,23 +318,20 @@ class RepeatedCustomValueConverter
 
   bool Convert(const base::Value& value,
                std::vector<std::unique_ptr<NestedType>>* field) const override {
-    const base::ListValue* list = NULL;
-    if (!value.GetAsList(&list))
+    if (!value.is_list())
       return false;
 
-    field->reserve(list->GetSize());
-    for (size_t i = 0; i < list->GetSize(); ++i) {
-      const base::Value* element = NULL;
-      if (!list->Get(i, &element))
-        continue;
-
-      std::unique_ptr<NestedType> nested(new NestedType);
-      if ((*convert_func_)(element, nested.get())) {
+    field->reserve(value.GetList().size());
+    size_t i = 0;
+    for (const Value& element : value.GetList()) {
+      auto nested = std::make_unique<NestedType>();
+      if ((*convert_func_)(&element, nested.get())) {
         field->push_back(std::move(nested));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
       }
+      i++;
     }
     return true;
   }
@@ -378,10 +366,11 @@ class JSONValueConverter {
   }
 
   void RegisterStringField(const std::string& field_name,
-                           string16 StructType::* field) {
+                           std::u16string StructType::*field) {
     fields_.push_back(
-        std::make_unique<internal::FieldConverter<StructType, string16>>(
-            field_name, field, new internal::BasicValueConverter<string16>));
+        std::make_unique<internal::FieldConverter<StructType, std::u16string>>(
+            field_name, field,
+            new internal::BasicValueConverter<std::u16string>));
   }
 
   void RegisterBoolField(const std::string& field_name,
@@ -447,10 +436,12 @@ class JSONValueConverter {
 
   void RegisterRepeatedString(
       const std::string& field_name,
-      std::vector<std::unique_ptr<string16>> StructType::*field) {
-    fields_.push_back(std::make_unique<internal::FieldConverter<
-                          StructType, std::vector<std::unique_ptr<string16>>>>(
-        field_name, field, new internal::RepeatedValueConverter<string16>));
+      std::vector<std::unique_ptr<std::u16string>> StructType::*field) {
+    fields_.push_back(
+        std::make_unique<internal::FieldConverter<
+            StructType, std::vector<std::unique_ptr<std::u16string>>>>(
+            field_name, field,
+            new internal::RepeatedValueConverter<std::u16string>));
   }
 
   void RegisterRepeatedDouble(
@@ -494,15 +485,14 @@ class JSONValueConverter {
   }
 
   bool Convert(const base::Value& value, StructType* output) const {
-    const DictionaryValue* dictionary_value = NULL;
-    if (!value.GetAsDictionary(&dictionary_value))
+    if (!value.is_dict())
       return false;
 
     for (size_t i = 0; i < fields_.size(); ++i) {
       const internal::FieldConverterBase<StructType>* field_converter =
           fields_[i].get();
-      const base::Value* field = NULL;
-      if (dictionary_value->Get(field_converter->field_path(), &field)) {
+      const base::Value* field = value.FindPath(field_converter->field_path());
+      if (field) {
         if (!field_converter->ConvertField(*field, output)) {
           DVLOG(1) << "failure at field " << field_converter->field_path();
           return false;

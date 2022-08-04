@@ -9,8 +9,6 @@
 
 #include <stddef.h>
 
-#include <string>
-
 #include "base/compiler_specific.h"
 #include "base/files/file_path.h"
 #include "base/macros.h"
@@ -26,8 +24,6 @@
 
 namespace base {
 
-class FilePath;
-
 // Clear a specific file from the system cache like EvictFileFromSystemCache,
 // but on failure it will sleep and retry. On the Windows buildbots, eviction
 // can fail if the file is marked in use, and this will throw off timings that
@@ -38,6 +34,11 @@ bool EvictFileFromSystemCacheWithRetry(const FilePath& file);
 // of failure to workaround Windows file locking semantics. Returns true on
 // success.
 bool DieFileDie(const FilePath& file, bool recurse);
+
+// Creates a a new unique directory and returns the generated path. The
+// directory will be automatically deleted when the test completes. Failure
+// upon creation or deletion will cause a test failure.
+FilePath CreateUniqueTempDirectoryScopedToTest();
 
 // Synchronize all the dirty pages from the page cache to disk (on POSIX
 // systems). The Windows analogy for this operation is to 'Flush file buffers'.

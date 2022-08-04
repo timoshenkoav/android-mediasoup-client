@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// NOTE: Header files that do not require the full definition of Callback or
-// Closure should #include "base/callback_forward.h" instead of this file.
+// NOTE: Header files that do not require the full definition of
+// base::{Once,Repeating}Callback or base::{Once,Repeating}Closure should
+// #include "base/callback_forward.h" instead of this file.
 
 #ifndef BASE_CALLBACK_H_
 #define BASE_CALLBACK_H_
 
 #include <stddef.h>
 
+#include "base/bind.h"
 #include "base/callback_forward.h"
 #include "base/callback_internal.h"
+#include "base/notreached.h"
 
 // -----------------------------------------------------------------------------
 // Usage documentation
@@ -42,11 +45,8 @@
 //
 // Callbacks also support cancellation. A common use is binding the receiver
 // object as a WeakPtr<T>. If that weak pointer is invalidated, calling Run()
-// will be a no-op. Note that |is_cancelled()| and |is_null()| are distinct:
+// will be a no-op. Note that |IsCancelled()| and |is_null()| are distinct:
 // simply cancelling a callback will not also make it null.
-//
-// base::Callback is currently a type alias for base::RepeatingCallback. In the
-// future, we expect to flip this to default to base::OnceCallback.
 //
 // See //docs/callback.md for the full documentation.
 
@@ -55,6 +55,7 @@ namespace base {
 template <typename R, typename... Args>
 class OnceCallback<R(Args...)> : public internal::CallbackBase {
  public:
+  using ResultType = R;
   using RunType = R(Args...);
   using PolymorphicInvoke = R (*)(internal::BindStateBase*,
                                   internal::PassingType<Args>...);
@@ -79,8 +80,6 @@ class OnceCallback<R(Args...)> : public internal::CallbackBase {
     return *this;
   }
 
-  bool Equals(const OnceCallback& other) const { return EqualsInternal(other); }
-
   R Run(Args... args) const & {
     static_assert(!sizeof(*this),
                   "OnceCallback::Run() may only be invoked on a non-const "
@@ -98,11 +97,45 @@ class OnceCallback<R(Args...)> : public internal::CallbackBase {
         reinterpret_cast<PolymorphicInvoke>(cb.polymorphic_invoke());
     return f(cb.bind_state_.get(), std::forward<Args>(args)...);
   }
+
+  // Then() returns a new OnceCallback that receives the same arguments as
+  // |this|, and with the return type of |then|. The returned callback will:
+  // 1) Run the functor currently bound to |this| callback.
+  // 2) Run the |then| callback with the result from step 1 as its single
+  //    argument.
+  // 3) Return the value from running the |then| callback.
+  //
+  // Since this method generates a callback that is a replacement for `this`,
+  // `this` will be consumed and reset to a null callback to ensure the
+  // originally-bound functor can be run at most once.
+  template <typename ThenR, typename... ThenArgs>
+  OnceCallback<ThenR(Args...)> Then(OnceCallback<ThenR(ThenArgs...)> then) && {
+    CHECK(then);
+    return BindOnce(
+        internal::ThenHelper<
+            OnceCallback, OnceCallback<ThenR(ThenArgs...)>>::CreateTrampoline(),
+        std::move(*this), std::move(then));
+  }
+
+  // This overload is required; even though RepeatingCallback is implicitly
+  // convertible to OnceCallback, that conversion will not used when matching
+  // for template argument deduction.
+  template <typename ThenR, typename... ThenArgs>
+  OnceCallback<ThenR(Args...)> Then(
+      RepeatingCallback<ThenR(ThenArgs...)> then) && {
+    CHECK(then);
+    return BindOnce(
+        internal::ThenHelper<
+            OnceCallback,
+            RepeatingCallback<ThenR(ThenArgs...)>>::CreateTrampoline(),
+        std::move(*this), std::move(then));
+  }
 };
 
 template <typename R, typename... Args>
 class RepeatingCallback<R(Args...)> : public internal::CallbackBaseCopyable {
  public:
+  using ResultType = R;
   using RunType = R(Args...);
   using PolymorphicInvoke = R (*)(internal::BindStateBase*,
                                   internal::PassingType<Args>...);
@@ -119,8 +152,12 @@ class RepeatingCallback<R(Args...)> : public internal::CallbackBaseCopyable {
   RepeatingCallback(RepeatingCallback&&) noexcept = default;
   RepeatingCallback& operator=(RepeatingCallback&&) noexcept = default;
 
-  bool Equals(const RepeatingCallback& other) const {
+  bool operator==(const RepeatingCallback& other) const {
     return EqualsInternal(other);
+  }
+
+  bool operator!=(const RepeatingCallback& other) const {
+    return !operator==(other);
   }
 
   R Run(Args... args) const & {
@@ -137,7 +174,41 @@ class RepeatingCallback<R(Args...)> : public internal::CallbackBaseCopyable {
     RepeatingCallback cb = std::move(*this);
     PolymorphicInvoke f =
         reinterpret_cast<PolymorphicInvoke>(cb.polymorphic_invoke());
-    return f(cb.bind_state_.get(), std::forward<Args>(args)...);
+    return f(std::move(cb).bind_state_.get(), std::forward<Args>(args)...);
+  }
+
+  // Then() returns a new RepeatingCallback that receives the same arguments as
+  // |this|, and with the return type of |then|. The
+  // returned callback will:
+  // 1) Run the functor currently bound to |this| callback.
+  // 2) Run the |then| callback with the result from step 1 as its single
+  //    argument.
+  // 3) Return the value from running the |then| callback.
+  //
+  // If called on an rvalue (e.g. std::move(cb).Then(...)), this method
+  // generates a callback that is a replacement for `this`. Therefore, `this`
+  // will be consumed and reset to a null callback to ensure the
+  // originally-bound functor will be run at most once.
+  template <typename ThenR, typename... ThenArgs>
+  RepeatingCallback<ThenR(Args...)> Then(
+      RepeatingCallback<ThenR(ThenArgs...)> then) const& {
+    CHECK(then);
+    return BindRepeating(
+        internal::ThenHelper<
+            RepeatingCallback,
+            RepeatingCallback<ThenR(ThenArgs...)>>::CreateTrampoline(),
+        *this, std::move(then));
+  }
+
+  template <typename ThenR, typename... ThenArgs>
+  RepeatingCallback<ThenR(Args...)> Then(
+      RepeatingCallback<ThenR(ThenArgs...)> then) && {
+    CHECK(then);
+    return BindRepeating(
+        internal::ThenHelper<
+            RepeatingCallback,
+            RepeatingCallback<ThenR(ThenArgs...)>>::CreateTrampoline(),
+        std::move(*this), std::move(then));
   }
 };
 

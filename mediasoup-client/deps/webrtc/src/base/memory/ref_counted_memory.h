@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "base/base_export.h"
+#include "base/containers/span.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/memory/shared_memory.h"
 #include "base/memory/shared_memory_mapping.h"
 
 namespace base {
@@ -41,6 +41,10 @@ class BASE_EXPORT RefCountedMemory
   template<typename T> const T* front_as() const {
     return reinterpret_cast<const T*>(front());
   }
+
+  // Alias for front() to make it possible for RefCountedMemory to implicitly
+  // convert to span.
+  const unsigned char* data() const { return front(); }
 
  protected:
   friend class RefCountedThreadSafe<RefCountedMemory>;
@@ -78,6 +82,7 @@ class BASE_EXPORT RefCountedBytes : public RefCountedMemory {
 
   // Constructs a RefCountedBytes object by copying from |initializer|.
   explicit RefCountedBytes(const std::vector<unsigned char>& initializer);
+  explicit RefCountedBytes(base::span<const unsigned char> initializer);
 
   // Constructs a RefCountedBytes object by copying |size| bytes from |p|.
   RefCountedBytes(const unsigned char* p, size_t size);
@@ -141,25 +146,27 @@ class BASE_EXPORT RefCountedString : public RefCountedMemory {
   DISALLOW_COPY_AND_ASSIGN(RefCountedString);
 };
 
-// An implementation of RefCountedMemory, where the bytes are stored in
-// SharedMemory.
-class BASE_EXPORT RefCountedSharedMemory : public RefCountedMemory {
+// An implementation of RefCountedMemory, where the bytes are stored in a
+// std::u16string.
+class BASE_EXPORT RefCountedString16 : public base::RefCountedMemory {
  public:
-  // Constructs a RefCountedMemory object by taking ownership of an already
-  // mapped SharedMemory object.
-  RefCountedSharedMemory(std::unique_ptr<SharedMemory> shm, size_t size);
+  RefCountedString16();
+
+  // Constructs a RefCountedString16 object by performing a swap.
+  static scoped_refptr<RefCountedString16> TakeString(
+      std::u16string* to_destroy);
 
   // RefCountedMemory:
   const unsigned char* front() const override;
   size_t size() const override;
 
+ protected:
+  ~RefCountedString16() override;
+
  private:
-  ~RefCountedSharedMemory() override;
+  std::u16string data_;
 
-  const std::unique_ptr<SharedMemory> shm_;
-  const size_t size_;
-
-  DISALLOW_COPY_AND_ASSIGN(RefCountedSharedMemory);
+  DISALLOW_COPY_AND_ASSIGN(RefCountedString16);
 };
 
 // An implementation of RefCountedMemory, where the bytes are stored in

@@ -5,26 +5,28 @@
 #ifndef BASE_SAMPLING_HEAP_PROFILER_SAMPLING_HEAP_PROFILER_H_
 #define BASE_SAMPLING_HEAP_PROFILER_SAMPLING_HEAP_PROFILER_H_
 
+#include <atomic>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "base/base_export.h"
 #include "base/macros.h"
+#include "base/no_destructor.h"
 #include "base/sampling_heap_profiler/poisson_allocation_sampler.h"
 #include "base/synchronization/lock.h"
+#include "base/thread_annotations.h"
+#include "base/threading/thread_id_name_manager.h"
 
 namespace base {
-
-template <typename T>
-class NoDestructor;
 
 // The class implements sampling profiling of native memory heap.
 // It uses PoissonAllocationSampler to aggregate the heap allocations and
 // record samples.
 // The recorded samples can then be retrieved using GetSamples method.
 class BASE_EXPORT SamplingHeapProfiler
-    : private PoissonAllocationSampler::SamplesObserver {
+    : private PoissonAllocationSampler::SamplesObserver,
+      public base::ThreadIdNameManager::Observer {
  public:
   class BASE_EXPORT Sample {
    public:
@@ -42,17 +44,14 @@ class BASE_EXPORT SamplingHeapProfiler
     // Name of the thread that made the sampled allocation.
     const char* thread_name = nullptr;
     // Call stack of PC addresses responsible for the allocation.
-    // If AllocationContextTracker::capture_mode() is in PSEUDO or MIXED modes
-    // the frame pointers may point to the name strings instead of PCs. In this
-    // cases all the strings pointers are also reported with |GetStrings| method
-    // of the |SamplingHeapProfiler|. This way they can be distinguished from
-    // the PC pointers.
     std::vector<void*> stack;
+
+    // Public for testing.
+    Sample(size_t size, size_t total, uint32_t ordinal);
 
    private:
     friend class SamplingHeapProfiler;
 
-    Sample(size_t size, size_t total, uint32_t ordinal);
 
     uint32_t ordinal;
   };
@@ -94,6 +93,9 @@ class BASE_EXPORT SamplingHeapProfiler
   static void Init();
   static SamplingHeapProfiler* Get();
 
+  // ThreadIdNameManager::Observer implementation:
+  void OnThreadNameChanged(const char* name) override;
+
  private:
   SamplingHeapProfiler();
   ~SamplingHeapProfiler() override;
@@ -106,31 +108,33 @@ class BASE_EXPORT SamplingHeapProfiler
                    const char* context) override;
   void SampleRemoved(void* address) override;
 
-  void CaptureMixedStack(const char* context, Sample* sample);
   void CaptureNativeStack(const char* context, Sample* sample);
-  const char* RecordString(const char* string);
+  const char* RecordString(const char* string) EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Mutex to access |samples_| and |strings_|.
   Lock mutex_;
 
   // Samples of the currently live allocations.
-  std::unordered_map<void*, Sample> samples_;
+  std::unordered_map<void*, Sample> samples_ GUARDED_BY(mutex_);
 
-  // When CaptureMode::PSEUDO_STACK or CaptureMode::MIXED_STACK is enabled
-  // the call stack contents of samples may contain strings besides
-  // PC addresses.
-  // In this case each string pointer is also added to the |strings_| set.
-  // The set does only contain pointers to static strings that are never
-  // deleted.
-  std::unordered_set<const char*> strings_;
+  // Contains pointers to static sample context strings that are never deleted.
+  std::unordered_set<const char*> strings_ GUARDED_BY(mutex_);
+
+  // Mutex to make |running_sessions_| and Add/Remove samples observer access
+  // atomic.
+  Lock start_stop_mutex_;
+
+  // Number of the running sessions.
+  int running_sessions_ = 0;
 
   // Last sample ordinal used to mark samples recorded during single session.
-  uint32_t last_sample_ordinal_ = 1;
+  std::atomic<uint32_t> last_sample_ordinal_{1};
 
   // Whether it should record thread names.
-  bool record_thread_names_ = false;
+  std::atomic<bool> record_thread_names_{false};
 
   friend class NoDestructor<SamplingHeapProfiler>;
+  friend class SamplingHeapProfilerTest;
 
   DISALLOW_COPY_AND_ASSIGN(SamplingHeapProfiler);
 };

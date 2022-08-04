@@ -16,22 +16,6 @@ namespace base {
 
 namespace android {
 
-namespace internal {
-
-// Manages the selection of a trial that can be overridden by a flag.
-//
-// If the flag is present in the command line, this will return true or false
-// for flag values "on" or "off", respectively. If not present or misspelled,
-// true is returned and an error logged.
-//
-// If the flag is not present, the true is returned by a 50% random choice, and
-// the corresponding flag added to the command line.
-BASE_EXPORT bool GetRandomizedTrial(
-    const std::string& flag_name,
-    CommandLine* command_line = CommandLine::ForCurrentProcess());
-
-}  // namespace internal.
-
 // The process the shared library is loaded in.
 // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.base.library_loader
 enum LibraryProcessType {
@@ -45,9 +29,21 @@ enum LibraryProcessType {
   PROCESS_WEBVIEW = 3,
   // Shared library is running in child process as part of webview.
   PROCESS_WEBVIEW_CHILD = 4,
+  // Shared library is running in the app that uses weblayer.
+  PROCESS_WEBLAYER = 5,
+  // Shared library is running in child process as part of weblayer.
+  PROCESS_WEBLAYER_CHILD = 6,
+  // Shared library is running in a non-embedded WebView process.
+  PROCESS_WEBVIEW_NONEMBEDDED = 7,
 };
 
-// A randomized trial using switches::kOrderfileMemoryOptimization.
+// Returns the library process type this library was loaded for.
+BASE_EXPORT LibraryProcessType GetLibraryProcessType();
+
+// Whether fewer code should be prefetched, and no-readahead should be set.
+// Returns true on low-end devices, where this speeds up startup, and false
+// elsewhere, where it slows it down. See
+// https://bugs.chromium.org/p/chromium/issues/detail?id=758566#c71 for details.
 BASE_EXPORT bool IsUsingOrderfileOptimization();
 
 typedef bool NativeInitializationHook(LibraryProcessType library_process_type);
@@ -55,17 +51,23 @@ typedef bool NativeInitializationHook(LibraryProcessType library_process_type);
 BASE_EXPORT void SetNativeInitializationHook(
     NativeInitializationHook native_initialization_hook);
 
+typedef void NonMainDexJniRegistrationHook();
+
+BASE_EXPORT void SetNonMainDexJniRegistrationHook(
+    NonMainDexJniRegistrationHook jni_registration_hook);
+
 // Record any pending renderer histogram value as histograms.  Pending values
-// are set by RegisterChromiumAndroidLinkerRendererHistogram and
-// RegisterLibraryPreloaderRendererHistogram.
+// are set by
+// JNI_LibraryLoader_RegisterChromiumAndroidLinkerRendererHistogram().
 BASE_EXPORT void RecordLibraryLoaderRendererHistograms();
 
 // Typedef for hook function to be called (indirectly from Java) once the
 // libraries are loaded. The hook function should register the JNI bindings
 // required to start the application. It should return true for success and
 // false for failure.
-// Note: this can't use base::Callback because there is no way of initializing
-// the default callback without using static objects, which we forbid.
+// Note: this can't use base::{Once, Repeating}Callback because there is no
+// way of initializing the default callback without using static objects, which
+// we forbid.
 typedef bool LibraryLoadedHook(JNIEnv* env,
                                jclass clazz,
                                LibraryProcessType library_process_type);
@@ -75,12 +77,6 @@ typedef bool LibraryLoadedHook(JNIEnv* env,
 // should register the JNI bindings required to start the application.
 
 BASE_EXPORT void SetLibraryLoadedHook(LibraryLoadedHook* func);
-
-// Pass the version name to the loader. This used to check that the library
-// version matches the version expected by Java before completing JNI
-// registration.
-// Note: argument must remain valid at least until library loading is complete.
-BASE_EXPORT void SetVersionNumber(const char* version_number);
 
 // Call on exit to delete the AtExitManager which OnLibraryLoadedOnUIThread
 // created.

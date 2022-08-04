@@ -14,24 +14,33 @@
 #include <unordered_map>
 #include <vector>
 
-#include "base/atomicops.h"
 #include "base/containers/stack.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/scoped_refptr.h"
+#include "base/no_destructor.h"
 #include "base/single_thread_task_runner.h"
+#include "base/threading/platform_thread.h"
 #include "base/time/time_override.h"
 #include "base/trace_event/category_registry.h"
 #include "base/trace_event/memory_dump_provider.h"
 #include "base/trace_event/trace_config.h"
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"
+#include "third_party/abseil-cpp/absl/types/optional.h"
+
+namespace perfetto {
+namespace trace_processor {
+class TraceProcessorStorage;
+}  // namespace trace_processor
+}  // namespace perfetto
 
 namespace base {
 class RefCountedString;
 
-template <typename T>
-class NoDestructor;
+namespace tracing {
+class PerfettoPlatform;
+}  // namespace tracing
 
 namespace trace_event {
 
@@ -41,6 +50,7 @@ class TraceBufferChunk;
 class TraceEvent;
 class TraceEventFilter;
 class TraceEventMemoryOverhead;
+class JsonStringOutputWriter;
 
 struct BASE_EXPORT TraceLogStatus {
   TraceLogStatus();
@@ -49,7 +59,11 @@ struct BASE_EXPORT TraceLogStatus {
   uint32_t event_count;
 };
 
-class BASE_EXPORT TraceLog : public MemoryDumpProvider {
+class BASE_EXPORT TraceLog :
+#if BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+    public perfetto::TrackEventSessionObserver,
+#endif  // BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+    public MemoryDumpProvider {
  public:
   // Argument passed to TraceLog::SetEnabled.
   enum Mode : uint8_t {
@@ -90,7 +104,14 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Returns true if TraceLog is enabled on recording mode.
   // Note: Returns false even if FILTERING_MODE is enabled.
-  bool IsEnabled() { return enabled_modes_ & RECORDING_MODE; }
+  bool IsEnabled() {
+#if BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+    return perfetto::TrackEvent::IsEnabled();
+#else   // !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+    AutoLock lock(lock_);
+    return enabled_modes_ & RECORDING_MODE;
+#endif  // !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+  }
 
   // Returns a bitmap of enabled modes from TraceLog::Mode.
   uint8_t enabled_modes() { return enabled_modes_; }
@@ -103,10 +124,12 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   int GetNumTracesRecorded();
 
 #if defined(OS_ANDROID)
-  void StartATrace();
+  void StartATrace(const std::string& category_filter);
   void StopATrace();
   void AddClockSyncMetadataEvent();
-#endif
+  void SetupATraceStartupTrace(const std::string& category_filter);
+  absl::optional<TraceConfig> TakeATraceStartupConfig();
+#endif  // defined(OS_ANDROID)
 
   // Enabled state listeners give a callback when tracing is enabled or
   // disabled. This can be used to tie into other library's tracing systems
@@ -171,6 +194,13 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
       const ArgumentFilterPredicate& argument_filter_predicate);
   ArgumentFilterPredicate GetArgumentFilterPredicate() const;
 
+  void SetMetadataFilterPredicate(
+      const MetadataFilterPredicate& metadata_filter_predicate);
+  MetadataFilterPredicate GetMetadataFilterPredicate() const;
+
+  void SetRecordHostAppPackageName(bool record_host_app_package_name);
+  bool ShouldRecordHostAppPackageName() const;
+
   // Flush all collected events to the given output callback. The callback will
   // be called one or more times either synchronously or asynchronously from
   // the current thread with IPC-bite-size chunks. The string format is
@@ -181,27 +211,34 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // callback will be called directly with (empty_string, false) to indicate
   // the end of this unsuccessful flush. Flush does the serialization
   // on the same thread if the caller doesn't set use_worker_thread explicitly.
-  typedef base::Callback<void(const scoped_refptr<base::RefCountedString>&,
-                              bool has_more_events)> OutputCallback;
+  using OutputCallback =
+      base::RepeatingCallback<void(const scoped_refptr<base::RefCountedString>&,
+                                   bool has_more_events)>;
   void Flush(const OutputCallback& cb, bool use_worker_thread = false);
 
   // Cancels tracing and discards collected data.
   void CancelTracing(const OutputCallback& cb);
 
-  using AddTraceEventOverrideCallback = void (*)(TraceEvent*,
+  using AddTraceEventOverrideFunction = void (*)(TraceEvent*,
                                                  bool thread_will_flush,
                                                  TraceEventHandle* handle);
-  using OnFlushCallback = void (*)();
-  using UpdateDurationCallback = void (*)(TraceEventHandle handle,
-                                          const TimeTicks& now,
-                                          const ThreadTicks& thread_now);
+  using OnFlushFunction = void (*)();
+  using UpdateDurationFunction =
+      void (*)(const unsigned char* category_group_enabled,
+               const char* name,
+               TraceEventHandle handle,
+               int thread_id,
+               bool explicit_timestamps,
+               const TimeTicks& now,
+               const ThreadTicks& thread_now,
+               ThreadInstructionCount thread_instruction_now);
   // The callbacks will be called up until the point where the flush is
   // finished, i.e. must be callable until OutputCallback is called with
   // has_more_events==false.
   void SetAddTraceEventOverrides(
-      const AddTraceEventOverrideCallback& add_event_override,
-      const OnFlushCallback& on_flush_callback,
-      const UpdateDurationCallback& update_duration_callback);
+      const AddTraceEventOverrideFunction& add_event_override,
+      const OnFlushFunction& on_flush_callback,
+      const UpdateDurationFunction& update_duration_callback);
 
   // Called by TRACE_EVENT* macros, don't call this directly.
   // The name parameter is a category group for example:
@@ -221,6 +258,12 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // Called by TRACE_EVENT* macros, don't call this directly.
   // If |copy| is set, |name|, |arg_name1| and |arg_name2| will be deep copied
   // into the event; see "Memory scoping note" and TRACE_EVENT_COPY_XXX above.
+  bool ShouldAddAfterUpdatingState(char phase,
+                                   const unsigned char* category_group_enabled,
+                                   const char* name,
+                                   unsigned long long id,
+                                   int thread_id,
+                                   TraceArguments* args);
   TraceEventHandle AddTraceEvent(char phase,
                                  const unsigned char* category_group_enabled,
                                  const char* name,
@@ -267,6 +310,18 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
       const TimeTicks& timestamp,
       TraceArguments* args,
       unsigned int flags);
+  TraceEventHandle AddTraceEventWithThreadIdAndTimestamps(
+      char phase,
+      const unsigned char* category_group_enabled,
+      const char* name,
+      const char* scope,
+      unsigned long long id,
+      unsigned long long bind_id,
+      int thread_id,
+      const TimeTicks& timestamp,
+      const ThreadTicks& thread_timestamp,
+      TraceArguments* args,
+      unsigned int flags);
 
   // Adds a metadata event that will be written when the trace log is flushed.
   void AddMetadataEvent(const unsigned char* category_group_enabled,
@@ -282,14 +337,21 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
       const unsigned char* category_group_enabled,
       const char* name,
       TraceEventHandle handle,
+      int thread_id,
+      bool explicit_timestamps,
       const TimeTicks& now,
-      const ThreadTicks& thread_now);
+      const ThreadTicks& thread_now,
+      ThreadInstructionCount thread_instruction_now);
 
   void EndFilteredEvent(const unsigned char* category_group_enabled,
                         const char* name,
                         TraceEventHandle handle);
 
   int process_id() const { return process_id_; }
+  std::string process_name() const {
+    AutoLock lock(lock_);
+    return process_name_;
+  }
 
   uint64_t MangleEventId(uint64_t id);
 
@@ -316,12 +378,12 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   void SetProcessSortIndex(int sort_index);
 
   // Sets the name of the process.
-  void set_process_name(const std::string& process_name) {
-    AutoLock lock(lock_);
-    process_name_ = process_name;
-  }
+  void set_process_name(const std::string& process_name);
 
-  bool IsProcessNameEmpty() const { return process_name_.empty(); }
+  bool IsProcessNameEmpty() const {
+    AutoLock lock(lock_);
+    return process_name_.empty();
+  }
 
   // Processes can have labels in addition to their names. Use labels, for
   // instance, to list out the web page titles that a process is handling.
@@ -333,9 +395,11 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // sort index, ascending, then by their name, and then tid.
   void SetThreadSortIndex(PlatformThreadId thread_id, int sort_index);
 
+#if !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
   // Allow setting an offset between the current TimeTicks time and the time
   // that should be reported.
   void SetTimeOffset(TimeDelta offset);
+#endif  // !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
   size_t GetObserverCountForTest() const;
 
@@ -353,6 +417,13 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Replaces |logged_events_| with a new TraceBuffer for testing.
   void SetTraceBufferForTesting(std::unique_ptr<TraceBuffer> trace_buffer);
+
+#if BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+  // perfetto::TrackEventSessionObserver implementation.
+  void OnSetup(const perfetto::DataSourceBase::SetupArgs&) override;
+  void OnStart(const perfetto::DataSourceBase::StartArgs&) override;
+  void OnStop(const perfetto::DataSourceBase::StopArgs&) override;
+#endif  // BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
  private:
   typedef unsigned int InternalTraceOptions;
@@ -393,18 +464,18 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   class OptionalAutoLock;
   struct RegisteredAsyncObserver;
 
-  TraceLog();
+  explicit TraceLog(int generation);
   ~TraceLog() override;
-  void AddMetadataEventsWhileLocked();
+  void AddMetadataEventsWhileLocked() EXCLUSIVE_LOCKS_REQUIRED(lock_);
   template <typename T>
   void AddMetadataEventWhileLocked(int thread_id,
                                    const char* metadata_name,
                                    const char* arg_name,
-                                   const T& value);
+                                   const T& value)
+      EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
   InternalTraceOptions trace_options() const {
-    return static_cast<InternalTraceOptions>(
-        subtle::NoBarrier_Load(&trace_options_));
+    return trace_options_.load(std::memory_order_relaxed);
   }
 
   TraceBuffer* trace_buffer() const { return logged_events_.get(); }
@@ -415,9 +486,10 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
                                     TraceEvent* trace_event);
 
   TraceEvent* AddEventToThreadSharedChunkWhileLocked(TraceEventHandle* handle,
-                                                     bool check_buffer_is_full);
-  void CheckIfBufferIsFullWhileLocked();
-  void SetDisabledWhileLocked(uint8_t modes);
+                                                     bool check_buffer_is_full)
+      EXCLUSIVE_LOCKS_REQUIRED(lock_);
+  void CheckIfBufferIsFullWhileLocked() EXCLUSIVE_LOCKS_REQUIRED(lock_);
+  void SetDisabledWhileLocked(uint8_t modes) EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
   TraceEvent* GetEventByHandleInternal(TraceEventHandle handle,
                                        OptionalAutoLock* lock);
@@ -425,6 +497,11 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   void FlushInternal(const OutputCallback& cb,
                      bool use_worker_thread,
                      bool discard_events);
+
+#if BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+  tracing::PerfettoPlatform* GetOrCreatePerfettoPlatform();
+  void OnTraceData(const char* data, size_t size, bool has_more);
+#endif  // BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
   // |generation| is used in the following callbacks to check if the callback
   // is called for the flush of the current |logged_events_|.
@@ -465,8 +542,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // This lock protects TraceLog member accesses (except for members protected
   // by thread_info_lock_) from arbitrary threads.
   mutable Lock lock_;
-  // This lock protects accesses to thread_names_, thread_event_start_times_
-  // and thread_colors_.
   Lock thread_info_lock_;
   uint8_t enabled_modes_;  // See TraceLog::Mode.
   int num_traces_recorded_;
@@ -476,24 +551,27 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // The lock protects observers access.
   mutable Lock observers_lock_;
   bool dispatching_to_observers_ = false;
-  std::vector<EnabledStateObserver*> enabled_state_observers_;
-  std::map<AsyncEnabledStateObserver*, RegisteredAsyncObserver>
-      async_observers_;
+  std::vector<EnabledStateObserver*> enabled_state_observers_
+      GUARDED_BY(observers_lock_);
+  std::map<AsyncEnabledStateObserver*, RegisteredAsyncObserver> async_observers_
+      GUARDED_BY(observers_lock_);
   // Manages ownership of the owned observers. The owned observers will also be
   // added to |enabled_state_observers_|.
   std::vector<std::unique_ptr<EnabledStateObserver>>
-      owned_enabled_state_observer_copy_;
+      owned_enabled_state_observer_copy_ GUARDED_BY(observers_lock_);
 
   std::string process_name_;
   std::unordered_map<int, std::string> process_labels_;
   int process_sort_index_;
   std::unordered_map<int, int> thread_sort_indices_;
-  std::unordered_map<int, std::string> thread_names_;
-  base::Time process_creation_time_;
+  std::unordered_map<int, std::string> thread_names_
+      GUARDED_BY(thread_info_lock_);
 
   // The following two maps are used only when ECHO_TO_CONSOLE.
-  std::unordered_map<int, base::stack<TimeTicks>> thread_event_start_times_;
-  std::unordered_map<std::string, int> thread_colors_;
+  std::unordered_map<int, base::stack<TimeTicks>> thread_event_start_times_
+      GUARDED_BY(thread_info_lock_);
+  std::unordered_map<std::string, int> thread_colors_
+      GUARDED_BY(thread_info_lock_);
 
   TimeTicks buffer_limit_reached_timestamp_;
 
@@ -504,7 +582,7 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   TimeDelta time_offset_;
 
-  subtle::AtomicWord /* Options */ trace_options_;
+  std::atomic<InternalTraceOptions> trace_options_;
 
   TraceConfig trace_config_;
   TraceConfig::EventFilters enabled_event_filters_;
@@ -527,13 +605,29 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   OutputCallback flush_output_callback_;
   scoped_refptr<SequencedTaskRunner> flush_task_runner_;
   ArgumentFilterPredicate argument_filter_predicate_;
+  MetadataFilterPredicate metadata_filter_predicate_;
+  bool record_host_app_package_name_{false};
   subtle::AtomicWord generation_;
   bool use_worker_thread_;
-  std::atomic<AddTraceEventOverrideCallback> add_trace_event_override_;
-  std::atomic<OnFlushCallback> on_flush_callback_;
-  std::atomic<UpdateDurationCallback> update_duration_callback_;
+  std::atomic<AddTraceEventOverrideFunction> add_trace_event_override_{nullptr};
+  std::atomic<OnFlushFunction> on_flush_override_{nullptr};
+  std::atomic<UpdateDurationFunction> update_duration_override_{nullptr};
 
-  FilterFactoryForTesting filter_factory_for_testing_;
+#if BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+  std::unique_ptr<::base::tracing::PerfettoPlatform> perfetto_platform_;
+  std::unique_ptr<perfetto::TracingSession> tracing_session_;
+#if !defined(OS_NACL)
+  std::unique_ptr<perfetto::trace_processor::TraceProcessorStorage>
+      trace_processor_;
+  std::unique_ptr<JsonStringOutputWriter> json_output_writer_;
+#endif  // !defined(OS_NACL)
+#endif  // BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+
+  FilterFactoryForTesting filter_factory_for_testing_ = nullptr;
+
+#if defined(OS_ANDROID)
+  absl::optional<TraceConfig> atrace_startup_config_;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(TraceLog);
 };

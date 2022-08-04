@@ -12,36 +12,30 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <string>
+#include <memory>
+#include <utility>
 
 #include "base/atomicops.h"
+#include "base/base_export.h"
 #include "base/debug/debugging_buildflags.h"
-#include "base/macros.h"
+#include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/time/time_override.h"
 #include "base/trace_event/builtin_categories.h"
 #include "base/trace_event/common/trace_event_common.h"
-#include "base/trace_event/heap_profiler.h"
+#include "base/trace_event/log_message.h"
+#include "base/trace_event/thread_instruction_count.h"
 #include "base/trace_event/trace_arguments.h"
 #include "base/trace_event/trace_category.h"
 #include "base/trace_event/trace_log.h"
-#include "build/build_config.h"
+#include "base/trace_event/traced_value_support.h"
+#include "base/tracing_buildflags.h"
+
+#if !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
 // By default, const char* argument values are assumed to have long-lived scope
 // and will not be copied. Use this macro to force a const char* to be copied.
 #define TRACE_STR_COPY(str) ::base::trace_event::TraceStringWithCopy(str)
-
-// DEPRECATED: do not use: Consider using the TRACE_ID_LOCAL macro instead. By
-// default, uint64_t ID argument values are not mangled with the Process ID in
-// TRACE_EVENT_ASYNC macros. Use this macro to force Process ID mangling.
-#define TRACE_ID_MANGLE(id) \
-    trace_event_internal::TraceID::ForceMangle(id)
-
-// DEPRECATED: do not use: Consider using the TRACE_ID_GLOBAL macro instead. By
-// default, pointers are mangled with the Process ID in TRACE_EVENT_ASYNC
-// macros. Use this macro to prevent Process ID mangling.
-#define TRACE_ID_DONT_MANGLE(id) \
-    trace_event_internal::TraceID::DontMangle(id)
 
 // By default, trace IDs are eventually converted to a single 64-bit number. Use
 // this macro to add a scope string. For example,
@@ -104,6 +98,10 @@
 #define TRACE_EVENT_API_GET_NUM_TRACES_RECORDED \
   trace_event_internal::GetNumTracesRecorded
 
+#endif  // !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+
+// Legacy TRACE_EVENT_API entrypoints. Do not use from new code.
+
 // Add a trace event to the platform tracing system.
 // base::trace_event::TraceEventHandle TRACE_EVENT_API_ADD_TRACE_EVENT(
 //                    char phase,
@@ -111,12 +109,7 @@
 //                    const char* name,
 //                    const char* scope,
 //                    unsigned long long id,
-//                    int num_args,
-//                    const char** arg_names,
-//                    const unsigned char* arg_types,
-//                    const unsigned long long* arg_values,
-//                    std::unique_ptr<ConvertableToTraceFormat>*
-//                    convertable_values,
+//                    base::trace_event::TraceArguments* args,
 //                    unsigned int flags)
 #define TRACE_EVENT_API_ADD_TRACE_EVENT trace_event_internal::AddTraceEvent
 
@@ -129,12 +122,7 @@
 //                    const char* scope,
 //                    unsigned long long id,
 //                    unsigned long long bind_id,
-//                    int num_args,
-//                    const char** arg_names,
-//                    const unsigned char* arg_types,
-//                    const unsigned long long* arg_values,
-//                    std::unique_ptr<ConvertableToTraceFormat>*
-//                    convertable_values,
+//                    base::trace_event::TraceArguments* args,
 //                    unsigned int flags)
 #define TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_BIND_ID \
   trace_event_internal::AddTraceEventWithBindId
@@ -149,12 +137,7 @@
 //                    const char* scope,
 //                    unsigned long long id,
 //                    int process_id,
-//                    int num_args,
-//                    const char** arg_names,
-//                    const unsigned char* arg_types,
-//                    const unsigned long long* arg_values,
-//                    std::unique_ptr<ConvertableToTraceFormat>*
-//                    convertable_values,
+//                    base::trace_event::TraceArguments* args,
 //                    unsigned int flags)
 #define TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_PROCESS_ID \
   trace_event_internal::AddTraceEventWithProcessId
@@ -169,12 +152,7 @@
 //                    unsigned long long id,
 //                    int thread_id,
 //                    const TimeTicks& timestamp,
-//                    int num_args,
-//                    const char** arg_names,
-//                    const unsigned char* arg_types,
-//                    const unsigned long long* arg_values,
-//                    std::unique_ptr<ConvertableToTraceFormat>*
-//                    convertable_values,
+//                    base::trace_event::TraceArguments* args,
 //                    unsigned int flags)
 #define TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_THREAD_ID_AND_TIMESTAMP \
   trace_event_internal::AddTraceEventWithThreadIdAndTimestamp
@@ -186,16 +164,6 @@
 //     base::trace_event::TraceEventHandle id)
 #define TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION \
   trace_event_internal::UpdateTraceEventDuration
-
-// Set the duration field of a COMPLETE trace event.
-// void TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION_EXPLICIT(
-//     const unsigned char* category_group_enabled,
-//     const char* name,
-//     base::trace_event::TraceEventHandle id,
-//     const TimeTicks& now,
-//     const ThreadTicks* thread_now)
-#define TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION_EXPLICIT \
-  trace_event_internal::UpdateTraceEventDurationExplicit
 
 // Adds a metadata event to the trace log. The |AppendValueAsTraceFormat| method
 // on the convertable value will be called at flush time.
@@ -221,10 +189,9 @@
 // Implementation detail: trace event macros create temporary variables
 // to keep instrumentation overhead low. These macros give each temporary
 // variable a unique name based on the line number to prevent name collisions.
-#define INTERNAL_TRACE_EVENT_UID3(a,b) \
-    trace_event_unique_##a##b
-#define INTERNAL_TRACE_EVENT_UID2(a,b) \
-    INTERNAL_TRACE_EVENT_UID3(a,b)
+#if !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+#define INTERNAL_TRACE_EVENT_UID3(a, b) trace_event_unique_##a##b
+#define INTERNAL_TRACE_EVENT_UID2(a, b) INTERNAL_TRACE_EVENT_UID3(a, b)
 #define INTERNAL_TRACE_EVENT_UID(name_prefix) \
     INTERNAL_TRACE_EVENT_UID2(name_prefix, __LINE__)
 
@@ -299,7 +266,7 @@
   INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                    \
   trace_event_internal::ScopedTracer INTERNAL_TRACE_EVENT_UID(tracer);       \
   if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                       \
-    base::trace_event::TraceEventHandle h =                                  \
+    base::trace_event::TraceEventHandle INTERNAL_TRACE_EVENT_UID(h) =        \
         trace_event_internal::AddTraceEvent(                                 \
             TRACE_EVENT_PHASE_COMPLETE,                                      \
             INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,          \
@@ -307,7 +274,24 @@
             TRACE_EVENT_FLAG_NONE, trace_event_internal::kNoId,              \
             ##__VA_ARGS__);                                                  \
     INTERNAL_TRACE_EVENT_UID(tracer).Initialize(                             \
-        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, h);          \
+        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,              \
+        INTERNAL_TRACE_EVENT_UID(h));                                        \
+  }
+
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLAGS(category_group, name,     \
+                                                   flags, ...)               \
+  INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                    \
+  trace_event_internal::ScopedTracer INTERNAL_TRACE_EVENT_UID(tracer);       \
+  if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                       \
+    base::trace_event::TraceEventHandle INTERNAL_TRACE_EVENT_UID(h) =        \
+        trace_event_internal::AddTraceEvent(                                 \
+            TRACE_EVENT_PHASE_COMPLETE,                                      \
+            INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,          \
+            trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
+            flags, trace_event_internal::kNoId, ##__VA_ARGS__);              \
+    INTERNAL_TRACE_EVENT_UID(tracer).Initialize(                             \
+        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,              \
+        INTERNAL_TRACE_EVENT_UID(h));                                        \
   }
 
 #define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(category_group, name,      \
@@ -318,14 +302,15 @@
     trace_event_internal::TraceID trace_event_bind_id((bind_id));            \
     unsigned int trace_event_flags =                                         \
         flow_flags | trace_event_bind_id.id_flags();                         \
-    base::trace_event::TraceEventHandle h =                                  \
+    base::trace_event::TraceEventHandle INTERNAL_TRACE_EVENT_UID(h) =        \
         trace_event_internal::AddTraceEvent(                                 \
             TRACE_EVENT_PHASE_COMPLETE,                                      \
             INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,          \
             trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
             trace_event_flags, trace_event_bind_id.raw_id(), ##__VA_ARGS__); \
     INTERNAL_TRACE_EVENT_UID(tracer).Initialize(                             \
-        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, h);          \
+        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,              \
+        INTERNAL_TRACE_EVENT_UID(h));                                        \
   }
 
 // Implementation detail: internal macro to create static category and add
@@ -382,45 +367,23 @@
 
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
-#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMPS(                \
-    category_group, name, id, thread_id, begin_timestamp, end_timestamp,    \
-    thread_end_timestamp, flags, ...)                                       \
-  do {                                                                      \
-    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                    \
-      trace_event_internal::TraceID trace_event_trace_id((id));             \
-      unsigned int trace_event_flags =                                      \
-          flags | trace_event_trace_id.id_flags();                          \
-      const unsigned char* uid_category_group_enabled =                     \
-          INTERNAL_TRACE_EVENT_UID(category_group_enabled);                 \
-      auto handle =                                                         \
-          trace_event_internal::AddTraceEventWithThreadIdAndTimestamp(      \
-              TRACE_EVENT_PHASE_COMPLETE, uid_category_group_enabled, name, \
-              trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),  \
-              thread_id, begin_timestamp,                                   \
-              trace_event_flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,      \
-              trace_event_internal::kNoId, ##__VA_ARGS__);                  \
-      TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION_EXPLICIT(                 \
-          uid_category_group_enabled, name, handle, end_timestamp,          \
-          thread_end_timestamp);                                            \
-    }                                                                       \
-  } while (0)
-
-// The linked ID will not be mangled.
-#define INTERNAL_TRACE_EVENT_ADD_LINK_IDS(category_group, name, id1, id2) \
-  do {                                                                    \
-    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);               \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                  \
-      trace_event_internal::TraceID source_id((id1));                     \
-      unsigned int source_flags = source_id.id_flags();                   \
-      trace_event_internal::TraceID target_id((id2));                     \
-      trace_event_internal::AddTraceEvent(                                \
-          TRACE_EVENT_PHASE_LINK_IDS,                                     \
-          INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,         \
-          source_id.scope(), source_id.raw_id(), source_flags,            \
-          trace_event_internal::kNoId, "linked_id",                       \
-          target_id.AsConvertableToTraceFormat());                        \
-    }                                                                     \
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMPS(                 \
+    phase, category_group, name, id, thread_id, timestamp, thread_timestamp, \
+    flags)                                                                   \
+  do {                                                                       \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                  \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                     \
+      trace_event_internal::TraceID trace_event_trace_id((id));              \
+      unsigned int trace_event_flags =                                       \
+          flags | trace_event_trace_id.id_flags();                           \
+      const unsigned char* uid_category_group_enabled =                      \
+          INTERNAL_TRACE_EVENT_UID(category_group_enabled);                  \
+      trace_event_internal::AddTraceEventWithThreadIdAndTimestamps(          \
+          phase, uid_category_group_enabled, name,                           \
+          trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),       \
+          thread_id, timestamp, thread_timestamp,                            \
+          trace_event_flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP);          \
+    }                                                                        \
   } while (0)
 
 // Implementation detail: internal macro to create static category and add
@@ -434,36 +397,7 @@
           ##__VA_ARGS__);                                            \
     }                                                                \
   } while (0)
-
-#if BUILDFLAG(ENABLE_LOCATION_SOURCE)
-
-// Implementation detail: internal macro to trace a task execution with the
-// location where it was posted from.
-//
-// This implementation is for when location sources are available.
-// TODO(ssid): The program counter of the current task should be added here.
-#define INTERNAL_TRACE_TASK_EXECUTION(run_function, task)                 \
-  TRACE_EVENT2("toplevel", run_function, "src_file",                      \
-               (task).posted_from.file_name(), "src_func",                \
-               (task).posted_from.function_name());                       \
-  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION INTERNAL_TRACE_EVENT_UID( \
-      task_event)((task).posted_from.file_name());                        \
-  TRACE_HEAP_PROFILER_API_SCOPED_WITH_PROGRAM_COUNTER                     \
-  INTERNAL_TRACE_EVENT_UID(task_pc_event)((task).posted_from.program_counter());
-
-#else
-
-// TODO(http://crbug.com760702) remove file name and just pass the program
-// counter to the heap profiler macro.
-// TODO(ssid): The program counter of the current task should be added here.
-#define INTERNAL_TRACE_TASK_EXECUTION(run_function, task)                      \
-  TRACE_EVENT1("toplevel", run_function, "src", (task).posted_from.ToString()) \
-  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION INTERNAL_TRACE_EVENT_UID(      \
-      task_event)((task).posted_from.file_name());                             \
-  TRACE_HEAP_PROFILER_API_SCOPED_WITH_PROGRAM_COUNTER                          \
-  INTERNAL_TRACE_EVENT_UID(task_pc_event)((task).posted_from.program_counter());
-
-#endif
+#endif  // BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
 namespace trace_event_internal {
 
@@ -509,129 +443,53 @@ class BASE_EXPORT TraceID {
         : scope_(scope), raw_id_(global_id.raw_id()) {
       id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
     }
-    WithScope(const char* scope,
-              unsigned long long prefix,
-              unsigned long long raw_id)
-        : scope_(scope), has_prefix_(true), prefix_(prefix), raw_id_(raw_id) {}
-    WithScope(const char* scope, unsigned long long prefix, GlobalId global_id)
-        : scope_(scope),
-          has_prefix_(true),
-          prefix_(prefix),
-          raw_id_(global_id.raw_id()) {
-      id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
-    }
     unsigned long long raw_id() const { return raw_id_; }
     const char* scope() const { return scope_; }
-    bool has_prefix() const { return has_prefix_; }
-    unsigned long long prefix() const { return prefix_; }
     unsigned int id_flags() const { return id_flags_; }
 
    private:
     const char* scope_ = nullptr;
-    bool has_prefix_ = false;
-    unsigned long long prefix_;
     unsigned long long raw_id_;
     unsigned int id_flags_ = TRACE_EVENT_FLAG_HAS_ID;
   };
 
-  // DEPRECATED: consider using GlobalId, instead.
-  class DontMangle {
-   public:
-    explicit DontMangle(const void* raw_id)
-        : raw_id_(static_cast<unsigned long long>(
-              reinterpret_cast<uintptr_t>(raw_id))) {}
-    explicit DontMangle(unsigned long long raw_id) : raw_id_(raw_id) {}
-    explicit DontMangle(unsigned long raw_id) : raw_id_(raw_id) {}
-    explicit DontMangle(unsigned int raw_id) : raw_id_(raw_id) {}
-    explicit DontMangle(unsigned short raw_id) : raw_id_(raw_id) {}
-    explicit DontMangle(unsigned char raw_id) : raw_id_(raw_id) {}
-    explicit DontMangle(long long raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit DontMangle(long raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit DontMangle(int raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit DontMangle(short raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit DontMangle(signed char raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    unsigned long long raw_id() const { return raw_id_; }
-   private:
-    unsigned long long raw_id_;
-  };
-
-  // DEPRECATED: consider using LocalId, instead.
-  class ForceMangle {
-   public:
-    explicit ForceMangle(unsigned long long raw_id) : raw_id_(raw_id) {}
-    explicit ForceMangle(unsigned long raw_id) : raw_id_(raw_id) {}
-    explicit ForceMangle(unsigned int raw_id) : raw_id_(raw_id) {}
-    explicit ForceMangle(unsigned short raw_id) : raw_id_(raw_id) {}
-    explicit ForceMangle(unsigned char raw_id) : raw_id_(raw_id) {}
-    explicit ForceMangle(long long raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit ForceMangle(long raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit ForceMangle(int raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit ForceMangle(short raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    explicit ForceMangle(signed char raw_id)
-        : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-    unsigned long long raw_id() const { return raw_id_; }
-   private:
-    unsigned long long raw_id_;
-  };
-
-  TraceID(const void* raw_id) : raw_id_(static_cast<unsigned long long>(
-                                        reinterpret_cast<uintptr_t>(raw_id))) {
-    id_flags_ = TRACE_EVENT_FLAG_HAS_ID | TRACE_EVENT_FLAG_MANGLE_ID;
-  }
-  TraceID(ForceMangle raw_id) : raw_id_(raw_id.raw_id()) {
-    id_flags_ = TRACE_EVENT_FLAG_HAS_ID | TRACE_EVENT_FLAG_MANGLE_ID;
-  }
-  TraceID(DontMangle raw_id) : raw_id_(raw_id.raw_id()) {}
-  TraceID(unsigned long long raw_id) : raw_id_(raw_id) {}
-  TraceID(unsigned long raw_id) : raw_id_(raw_id) {}
-  TraceID(unsigned int raw_id) : raw_id_(raw_id) {}
-  TraceID(unsigned short raw_id) : raw_id_(raw_id) {}
-  TraceID(unsigned char raw_id) : raw_id_(raw_id) {}
-  TraceID(long long raw_id)
-      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-  TraceID(long raw_id)
-      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-  TraceID(int raw_id)
-      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-  TraceID(short raw_id)
-      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-  TraceID(signed char raw_id)
-      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
-  TraceID(LocalId raw_id) : raw_id_(raw_id.raw_id()) {
+  explicit TraceID(const void* raw_id)
+      : raw_id_(static_cast<unsigned long long>(
+            reinterpret_cast<uintptr_t>(raw_id))) {
     id_flags_ = TRACE_EVENT_FLAG_HAS_LOCAL_ID;
   }
-  TraceID(GlobalId raw_id) : raw_id_(raw_id.raw_id()) {
+  explicit TraceID(unsigned long long raw_id) : raw_id_(raw_id) {}
+  explicit TraceID(unsigned long raw_id) : raw_id_(raw_id) {}
+  explicit TraceID(unsigned int raw_id) : raw_id_(raw_id) {}
+  explicit TraceID(unsigned short raw_id) : raw_id_(raw_id) {}
+  explicit TraceID(unsigned char raw_id) : raw_id_(raw_id) {}
+  explicit TraceID(long long raw_id)
+      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
+  explicit TraceID(long raw_id)
+      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
+  explicit TraceID(int raw_id)
+      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
+  explicit TraceID(short raw_id)
+      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
+  explicit TraceID(signed char raw_id)
+      : raw_id_(static_cast<unsigned long long>(raw_id)) {}
+  explicit TraceID(LocalId raw_id) : raw_id_(raw_id.raw_id()) {
+    id_flags_ = TRACE_EVENT_FLAG_HAS_LOCAL_ID;
+  }
+  explicit TraceID(GlobalId raw_id) : raw_id_(raw_id.raw_id()) {
     id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
   }
-  TraceID(WithScope scoped_id)
+  explicit TraceID(WithScope scoped_id)
       : scope_(scoped_id.scope()),
-        has_prefix_(scoped_id.has_prefix()),
-        prefix_(scoped_id.prefix()),
         raw_id_(scoped_id.raw_id()),
         id_flags_(scoped_id.id_flags()) {}
 
   unsigned long long raw_id() const { return raw_id_; }
   const char* scope() const { return scope_; }
-  bool has_prefix() const { return has_prefix_; }
-  unsigned long long prefix() const { return prefix_; }
   unsigned int id_flags() const { return id_flags_; }
-
-  std::unique_ptr<base::trace_event::ConvertableToTraceFormat>
-  AsConvertableToTraceFormat() const;
 
  private:
   const char* scope_ = nullptr;
-  bool has_prefix_ = false;
-  unsigned long long prefix_;
   unsigned long long raw_id_;
   unsigned int id_flags_ = TRACE_EVENT_FLAG_HAS_ID;
 };
@@ -695,6 +553,18 @@ AddTraceEventWithThreadIdAndTimestamp(
     base::trace_event::TraceArguments* args,
     unsigned int flags);
 
+base::trace_event::TraceEventHandle BASE_EXPORT
+AddTraceEventWithThreadIdAndTimestamps(
+    char phase,
+    const unsigned char* category_group_enabled,
+    const char* name,
+    const char* scope,
+    unsigned long long id,
+    int thread_id,
+    const base::TimeTicks& timestamp,
+    const base::ThreadTicks& thread_timestamp,
+    unsigned int flags);
+
 void BASE_EXPORT AddMetadataEvent(const unsigned char* category_group_enabled,
                                   const char* name,
                                   base::trace_event::TraceArguments* args,
@@ -707,113 +577,24 @@ UpdateTraceEventDuration(const unsigned char* category_group_enabled,
                          const char* name,
                          base::trace_event::TraceEventHandle handle);
 
-void BASE_EXPORT
-UpdateTraceEventDurationExplicit(const unsigned char* category_group_enabled,
-                                 const char* name,
-                                 base::trace_event::TraceEventHandle handle,
-                                 const base::TimeTicks& now,
-                                 const base::ThreadTicks& thread_now);
-
-// TODO(898794): Remove these functions once all callers have been updated
-// to use base::trace_event::Arguments instead.
-base::trace_event::TraceEventHandle BASE_EXPORT
-AddTraceEvent(char phase,
-              const unsigned char* category_group_enabled,
-              const char* name,
-              const char* scope,
-              unsigned long long id,
-              int num_args,
-              const char* const* arg_names,
-              const unsigned char* arg_types,
-              const unsigned long long* arg_values,
-              std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-                  convertable_values,
-              unsigned int flags);
-
-base::trace_event::TraceEventHandle BASE_EXPORT AddTraceEventWithBindId(
-    char phase,
+void BASE_EXPORT UpdateTraceEventDurationExplicit(
     const unsigned char* category_group_enabled,
     const char* name,
-    const char* scope,
-    unsigned long long id,
-    unsigned long long bind_id,
-    int num_args,
-    const char* const* arg_names,
-    const unsigned char* arg_types,
-    const unsigned long long* arg_values,
-    std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-        convertable_values,
-    unsigned int flags);
-
-base::trace_event::TraceEventHandle BASE_EXPORT AddTraceEventWithProcessId(
-    char phase,
-    const unsigned char* category_group_enabled,
-    const char* name,
-    const char* scope,
-    unsigned long long id,
-    int process_id,
-    int num_args,
-    const char* const* arg_names,
-    const unsigned char* arg_types,
-    const unsigned long long* arg_values,
-    std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-        convertable_values,
-    unsigned int flags);
-
-base::trace_event::TraceEventHandle BASE_EXPORT
-AddTraceEventWithThreadIdAndTimestamp(
-    char phase,
-    const unsigned char* category_group_enabled,
-    const char* name,
-    const char* scope,
-    unsigned long long id,
+    base::trace_event::TraceEventHandle handle,
     int thread_id,
-    const base::TimeTicks& timestamp,
-    int num_args,
-    const char* const* arg_names,
-    const unsigned char* arg_types,
-    const unsigned long long* arg_values,
-    std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-        convertable_values,
-    unsigned int flags);
-
-base::trace_event::TraceEventHandle BASE_EXPORT
-AddTraceEventWithThreadIdAndTimestamp(
-    char phase,
-    const unsigned char* category_group_enabled,
-    const char* name,
-    const char* scope,
-    unsigned long long id,
-    unsigned long long bind_id,
-    int thread_id,
-    const base::TimeTicks& timestamp,
-    int num_args,
-    const char* const* arg_names,
-    const unsigned char* arg_types,
-    const unsigned long long* arg_values,
-    std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-        convertable_values,
-    unsigned int flags);
-
-void BASE_EXPORT
-AddMetadataEvent(const unsigned char* category_group_enabled,
-                 const char* name,
-                 int num_args,
-                 const char* const* arg_names,
-                 const unsigned char* arg_types,
-                 const unsigned long long* arg_values,
-                 std::unique_ptr<base::trace_event::ConvertableToTraceFormat>*
-                     convertable_values,
-                 unsigned int flags);
+    bool explicit_timestamps,
+    const base::TimeTicks& now,
+    const base::ThreadTicks& thread_now,
+    base::trace_event::ThreadInstructionCount thread_instruction_now);
 
 // These AddTraceEvent and AddTraceEventWithThreadIdAndTimestamp template
 // functions are defined here instead of in the macro, because the arg_values
-// could be temporary objects, such as std::string. In order to store
+// could be temporary objects, such as `std::string`. In order to store
 // pointers to the internal c_str and pass through to the tracing API,
 // the arg_values must live throughout these procedures.
 
 template <class ARG1_TYPE>
-static inline base::trace_event::TraceEventHandle
+inline base::trace_event::TraceEventHandle
 AddTraceEventWithThreadIdAndTimestamp(
     char phase,
     const unsigned char* category_group_enabled,
@@ -834,7 +615,7 @@ AddTraceEventWithThreadIdAndTimestamp(
 }
 
 template <class ARG1_TYPE, class ARG2_TYPE>
-static inline base::trace_event::TraceEventHandle
+inline base::trace_event::TraceEventHandle
 AddTraceEventWithThreadIdAndTimestamp(
     char phase,
     const unsigned char* category_group_enabled,
@@ -857,7 +638,7 @@ AddTraceEventWithThreadIdAndTimestamp(
       timestamp, &args, flags);
 }
 
-static inline base::trace_event::TraceEventHandle
+inline base::trace_event::TraceEventHandle
 AddTraceEventWithThreadIdAndTimestamp(
     char phase,
     const unsigned char* category_group_enabled,
@@ -873,7 +654,7 @@ AddTraceEventWithThreadIdAndTimestamp(
       timestamp, nullptr, flags);
 }
 
-static inline base::trace_event::TraceEventHandle AddTraceEvent(
+inline base::trace_event::TraceEventHandle AddTraceEvent(
     char phase,
     const unsigned char* category_group_enabled,
     const char* name,
@@ -889,7 +670,7 @@ static inline base::trace_event::TraceEventHandle AddTraceEvent(
 }
 
 template <class ARG1_TYPE>
-static inline base::trace_event::TraceEventHandle AddTraceEvent(
+inline base::trace_event::TraceEventHandle AddTraceEvent(
     char phase,
     const unsigned char* category_group_enabled,
     const char* name,
@@ -907,7 +688,7 @@ static inline base::trace_event::TraceEventHandle AddTraceEvent(
 }
 
 template <class ARG1_TYPE, class ARG2_TYPE>
-static inline base::trace_event::TraceEventHandle AddTraceEvent(
+inline base::trace_event::TraceEventHandle AddTraceEvent(
     char phase,
     const unsigned char* category_group_enabled,
     const char* name,
@@ -937,6 +718,8 @@ static void AddMetadataEvent(const unsigned char* category_group_enabled,
   trace_event_internal::AddMetadataEvent(category_group_enabled, event_name,
                                          &args, TRACE_EVENT_FLAG_NONE);
 }
+
+#if !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
 
 // Used by TRACE_EVENTx macros. Do not use directly.
 class TRACE_EVENT_API_CLASS_EXPORT ScopedTracer {
@@ -988,6 +771,8 @@ class TRACE_EVENT_API_CLASS_EXPORT ScopedTraceBinaryEfficient {
     trace_event_internal::ScopedTraceBinaryEfficient \
         INTERNAL_TRACE_EVENT_UID(scoped_trace)(category_group, name);
 
+#endif  // !BUILDFLAG(USE_PERFETTO_CLIENT_LIBRARY)
+
 }  // namespace trace_event_internal
 
 namespace base {
@@ -1000,6 +785,9 @@ class TraceScopedTrackableObject {
       : name_(name), id_(id) {
     TRACE_EVENT_OBJECT_CREATED_WITH_ID(category, name_, id_);
   }
+  TraceScopedTrackableObject(const TraceScopedTrackableObject&) = delete;
+  TraceScopedTrackableObject& operator=(const TraceScopedTrackableObject&) =
+      delete;
 
   template <typename ArgType> void snapshot(ArgType snapshot) {
     TRACE_EVENT_OBJECT_SNAPSHOT_WITH_ID(category, name_, id_, snapshot);
@@ -1012,8 +800,6 @@ class TraceScopedTrackableObject {
  private:
   const char* name_;
   IDType id_;
-
-  DISALLOW_COPY_AND_ASSIGN(TraceScopedTrackableObject);
 };
 
 }  // namespace trace_event
