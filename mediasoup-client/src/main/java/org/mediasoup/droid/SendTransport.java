@@ -14,6 +14,8 @@ public class SendTransport extends Transport {
     /** @return producer Id */
     @CalledByNative("Listener")
     String onProduce(Transport transport, String kind, String rtpParameters, String appData);
+    @CalledByNative("Listener")
+    String onProduceData(Transport transport, String label, String protocol, String rtpParameters, String appData);
   }
 
   private long mNativeTransport;
