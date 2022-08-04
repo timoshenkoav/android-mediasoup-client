@@ -1,2 +1,5 @@
-webrtc.jar filter=lfs diff=lfs merge=lfs -text
-libwebrtc.a filter=lfs diff=lfs merge=lfs -text
+mediasoup-client/deps/webrtc/lib/arm64-v8a/libwebrtc.a filter=lfs diff=lfs merge=lfs -text
+mediasoup-client/deps/webrtc/lib/x86/libwebrtc.a filter=lfs diff=lfs merge=lfs -text
+mediasoup-client/deps/webrtc/lib/x86_64/libwebrtc.a filter=lfs diff=lfs merge=lfs -text
+mediasoup-client/deps/webrtc/lib/libwebrtc.jar filter=lfs diff=lfs merge=lfs -text
+mediasoup-client/deps/webrtc/lib/armeabi-v7a/libwebrtc.a filter=lfs diff=lfs merge=lfs -text
