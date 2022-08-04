@@ -40,12 +40,15 @@ public class RTCUtils {
     return new RtpParameters.Encoding(
         rid,
         active,
+        1.0,
+        1,
         maxBitrateBps,
         minBitrateBps,
         maxFramerate,
         numTemporalLayers,
         scaleResolutionDownBy,
-        ssrc);
+        ssrc,
+        false);
   }
 
   public static MediaStreamTrack createMediaStreamTrack(long nativeTrack) {
