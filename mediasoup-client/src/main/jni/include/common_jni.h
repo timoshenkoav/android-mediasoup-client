@@ -17,6 +17,7 @@
 namespace mediasoupclient
 {
 using nlohmann::json;
-} // namespace mediasoupclient
+}
 
 #endif // MEDIASOUP_CLIENT_ANDROID_COMMON_JNI_H
+

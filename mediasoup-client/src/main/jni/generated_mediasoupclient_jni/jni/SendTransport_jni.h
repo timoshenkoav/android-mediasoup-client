@@ -54,6 +54,7 @@ inline jclass org_mediasoup_droid_SendTransport_00024Listener_clazz(JNIEnv* env)
 namespace mediasoupclient {
 
 static jlong JNI_SendTransport_GetNativeTransport(JNIEnv* env, jlong transport);
+static void JNI_SendTransport_removeTrack(JNIEnv* env, jlong transport, jlong track);
 
 JNI_GENERATOR_EXPORT jlong Java_org_mediasoup_droid_SendTransport_nativeGetNativeTransport(
     JNIEnv* env,
@@ -118,6 +119,34 @@ static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduce(JNIEnv
       static_cast<jstring>(env->CallObjectMethod(obj.obj(),
           call_context.base.method_id, transport.obj(), kind.obj(), rtpParameters.obj(),
               appData.obj()));
+  return base::android::ScopedJavaLocalRef<jstring>(env, ret);
+}
+
+static std::atomic<jmethodID>
+    g_org_mediasoup_droid_SendTransport_00024Listener_onProduceData(nullptr);
+static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduceData(JNIEnv* env, const
+    base::android::JavaRef<jobject>& obj, const base::android::JavaRef<jobject>& transport,
+    const base::android::JavaRef<jstring>& label,
+    const base::android::JavaRef<jstring>& protocol,
+    const base::android::JavaRef<jstring>& rtpParameters,
+    const base::android::JavaRef<jstring>& appData) {
+  jclass clazz = org_mediasoup_droid_SendTransport_00024Listener_clazz(env);
+  CHECK_CLAZZ(env, obj.obj(),
+      org_mediasoup_droid_SendTransport_00024Listener_clazz(env), NULL);
+
+  jni_generator::JniJavaCallContextChecked call_context;
+  call_context.Init<
+      base::android::MethodID::TYPE_INSTANCE>(
+          env,
+          clazz,
+          "onProduceData",
+"(Lorg/mediasoup/droid/Transport;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+          &g_org_mediasoup_droid_SendTransport_00024Listener_onProduceData);
+
+  jstring ret =
+      static_cast<jstring>(env->CallObjectMethod(obj.obj(),
+          call_context.base.method_id, transport.obj(), label.obj(), protocol.obj(),
+              rtpParameters.obj(), appData.obj()));
   return base::android::ScopedJavaLocalRef<jstring>(env, ret);
 }
 

@@ -8,7 +8,7 @@ set(mediasoup_client_so_VERSION_MINOR 0)
 set(mediasoup_client_so_VERSION_PATCH 8)
 
 # C++ standard requirements.
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(

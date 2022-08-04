@@ -35,7 +35,7 @@ static jlong JNI_PeerConnection_NewPeerConnection(
 PeerConnection* ExtractNativePC(JNIEnv* env, const JavaRef<jobject>& j_pc)
 {
 	auto* pc = reinterpret_cast<OwnedPeerConnection*>(
-	  Java_PeerConnection_getNativeOwnedPeerConnection(env, j_pc));
+	Java_PeerConnection_getNativeOwnedPeerConnection(env, j_pc));
 	MSC_ASSERT(pc != nullptr, "native peerConnection pointer null");
 	return pc->pc();
 }

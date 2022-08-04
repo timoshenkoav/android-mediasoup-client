@@ -34,6 +34,7 @@ void SendTransportListenerJni::OnConnectionStateChange(
 std::future<std::string> SendTransportListenerJni::OnProduce(
   SendTransport* /*transport*/, const std::string& kind, json rtpParameters, const json& appData)
 {
+	MSC_TRACE();
 	JNIEnv* env = webrtc::AttachCurrentThreadIfNeeded();
 	auto result = Java_Listener_onProduce(
 	  env,
@@ -45,6 +46,28 @@ std::future<std::string> SendTransportListenerJni::OnProduce(
 	std::promise<std::string> promise;
 	promise.set_value(JavaToNativeString(env, result));
 	return promise.get_future();
+}
+
+std::future<std::string> SendTransportListenerJni::OnProduceData(
+        SendTransport* transport,
+        const nlohmann::json& sctpStreamParameters,
+        const std::string& label,
+        const std::string& protocol,
+        const nlohmann::json& appData)
+{
+    JNIEnv* env = webrtc::AttachCurrentThreadIfNeeded();
+	MSC_TRACE();
+    auto result = Java_Listener_onProduceData(
+            env,
+            j_listener_,
+            j_transport_,
+            NativeToJavaString(env, label),
+			NativeToJavaString(env, protocol),
+            NativeToJavaString(env, sctpStreamParameters.dump()),
+            NativeToJavaString(env, appData.dump()));
+    std::promise<std::string> promise;
+    promise.set_value(JavaToNativeString(env, result));
+    return promise.get_future();
 }
 
 std::future<void> RecvTransportListenerJni::OnConnect(Transport* /*transport*/, const json& dtlsParameters)
@@ -216,7 +239,7 @@ static ScopedJavaLocalRef<jobject> JNI_SendTransport_Produce(
 			appData = json::parse(JavaToNativeString(env, j_appData));
 		}
 		auto transport = (reinterpret_cast<OwnedSendTransport*>(j_transport))->transport();
-		auto producer  = transport->Produce(listener, track, &encodings, &codecOptions, appData);
+		auto producer  = transport->Produce(listener, track, &encodings, &codecOptions, NULL, appData);
 		return NativeToJavaProducer(env, producer, listener);
 	}
 	catch (const std::exception& e)

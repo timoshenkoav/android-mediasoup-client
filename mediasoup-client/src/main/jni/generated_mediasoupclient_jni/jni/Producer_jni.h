@@ -202,8 +202,10 @@ static void Java_Listener_onTransportClose(JNIEnv* env, const base::android::Jav
           "(Lorg/mediasoup/droid/Producer;)V",
           &g_org_mediasoup_droid_Producer_00024Listener_onTransportClose);
 
-     env->CallVoidMethod(obj.obj(),
-          call_context.base.method_id, producer.obj());
+  if (obj.obj()!=NULL) {
+    env->CallVoidMethod(obj.obj(),
+                        call_context.base.method_id, producer.obj());
+  }
 }
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_Producer_Constructor(nullptr);
