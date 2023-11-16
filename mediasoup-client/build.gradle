@@ -3,13 +3,14 @@ apply plugin: 'maven-publish'
 // Source of webrtc.
 def WEBRTC_INC_PATH = "${projectDir}/deps/webrtc/src/"
 // Precompiled static libs and jar for webrtc android.
+//def WEBRTC_BASE_PATH = "${projectDir}/deps/webrtc/lib/"
 def WEBRTC_LIB_PATH = "${projectDir}/deps/webrtc/lib/"
 
 android {
     compileSdkVersion 32
 
     defaultConfig {
-        minSdkVersion 18
+        minSdkVersion 21
         targetSdkVersion 32
         versionCode 308
         versionName "3.0.8"
@@ -25,7 +26,9 @@ android {
                         "-DSDPTRANSFORM_BUILD_TESTS=OFF",
                         "-DSDPTRANSFORM_BUILD_READMEHELPER=OFF",
                         "-DMEDIASOUPCLIENT_LOG_TRACE=ON",
-                        "-DMEDIASOUPCLIENT_LOG_DEV=ON"
+                        "-DMEDIASOUPCLIENT_LOG_DEV=ON",
+                        "-DANDROID_STL=c++_static"
+                cppFlags "-Wl,--build-id -g"
             }
         }
 
@@ -47,7 +50,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-
+    packagingOptions {
+        doNotStrip '**.so'     // ADD THIS! #1
+    }
     externalNativeBuild {
         cmake {
             // Provides a relative path to your CMake build script.

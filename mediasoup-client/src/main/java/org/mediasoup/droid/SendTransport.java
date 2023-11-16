@@ -30,6 +30,10 @@ public class SendTransport extends Transport {
     nativeFreeTransport(mNativeTransport);
     mNativeTransport = 0;
   }
+  public void close() {
+    checkTransportExists();
+    nativeCloseTransport(mNativeTransport);
+  }
 
   private void checkTransportExists() {
     if (mNativeTransport == 0) {
@@ -81,4 +85,5 @@ public class SendTransport extends Transport {
       String appData);
 
   private static native void nativeFreeTransport(long transport);
+  private static native void nativeCloseTransport(long transport);
 }

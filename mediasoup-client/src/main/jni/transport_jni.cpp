@@ -250,11 +250,17 @@ static ScopedJavaLocalRef<jobject> JNI_SendTransport_Produce(
 	}
 }
 
-static void JNI_SendTransport_FreeTransport(JNIEnv* env, jlong j_transport)
+static void JNI_SendTransport_CloseTransport(JNIEnv* env, jlong j_transport)
 {
 	MSC_TRACE();
-
-	delete reinterpret_cast<OwnedSendTransport*>(j_transport);
+	auto transport = reinterpret_cast<OwnedSendTransport*>(j_transport);
+	transport->transport()->Close();
+}
+static void JNI_SendTransport_FreeTransport(JNIEnv* env, jlong j_transport)
+{
+        MSC_TRACE();
+        auto transport = reinterpret_cast<OwnedSendTransport*>(j_transport);
+	    delete transport;
 }
 
 static jlong JNI_RecvTransport_GetNativeTransport(JNIEnv* env, jlong j_transport)

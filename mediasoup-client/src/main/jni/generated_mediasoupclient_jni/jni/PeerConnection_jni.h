@@ -136,6 +136,7 @@ JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_PeerConnection_nativeSetRemot
       jcaller), type, base::android::JavaParamRef<jstring>(env, description));
 }
 
+
 static base::android::ScopedJavaLocalRef<jstring> JNI_PeerConnection_GetLocalDescription(JNIEnv*
     env, const base::android::JavaParamRef<jobject>& jcaller);
 

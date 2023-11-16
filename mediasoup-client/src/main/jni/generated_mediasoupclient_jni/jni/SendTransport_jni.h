@@ -87,12 +87,20 @@ JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_SendTransport_nativeProduc
 }
 
 static void JNI_SendTransport_FreeTransport(JNIEnv* env, jlong transport);
+static void JNI_SendTransport_CloseTransport(JNIEnv* env, jlong transport);
 
 JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_SendTransport_nativeFreeTransport(
     JNIEnv* env,
     jclass jcaller,
     jlong transport) {
   return JNI_SendTransport_FreeTransport(env, transport);
+}
+
+JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_SendTransport_nativeCloseTransport(
+    JNIEnv* env,
+    jclass jcaller,
+    jlong transport) {
+    return JNI_SendTransport_CloseTransport(env, transport);
 }
 
 
