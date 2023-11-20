@@ -6,58 +6,53 @@
 
 using json = nlohmann::json;
 
-namespace mediasoupclient
-{
-namespace test
-{
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenRouterRtpCapabilities(JNIEnv* env)
-	{
-		json routerRtpCapabilities = generateRouterRtpCapabilities();
-		return NativeToJavaString(env, routerRtpCapabilities.dump());
-	}
+namespace mediasoupclient {
+    namespace test {
+        static webrtc::ScopedJavaLocalRef<jstring>
+        JNI_Parameters_GenRouterRtpCapabilities(JNIEnv *env) {
+            json routerRtpCapabilities = generateRouterRtpCapabilities();
+            return webrtc::NativeToJavaString(env, routerRtpCapabilities.dump());
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenRouterRtpCapabilitiesExclude(
-	  JNIEnv* env, const JavaParamRef<jstring>& j_exclude)
-	{
-		std::string exclude        = JavaToNativeString(env, j_exclude);
-		json routerRtpCapabilities = generateRouterRtpCapabilities();
-		for (auto& codec : routerRtpCapabilities["codecs"])
-			codec.erase(exclude);
+        static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenRouterRtpCapabilitiesExclude(
+                JNIEnv *env, const webrtc::JavaParamRef<jstring> &j_exclude) {
+            std::string exclude = webrtc::JavaToNativeString(env, j_exclude);
+            json routerRtpCapabilities = generateRouterRtpCapabilities();
+            for (auto &codec: routerRtpCapabilities["codecs"])
+                codec.erase(exclude);
 
-		return NativeToJavaString(env, routerRtpCapabilities.dump());
-	}
+            return webrtc::NativeToJavaString(env, routerRtpCapabilities.dump());
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenRtpParametersByKind(JNIEnv* env)
-	{
-		json rtpParametersByKind = generateRtpParametersByKind();
-		return NativeToJavaString(env, rtpParametersByKind.dump());
-	}
+        static webrtc::ScopedJavaLocalRef<jstring>
+        JNI_Parameters_GenRtpParametersByKind(JNIEnv *env) {
+            json rtpParametersByKind = generateRtpParametersByKind();
+            return webrtc::NativeToJavaString(env, rtpParametersByKind.dump());
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenLocalDtlsParameters(JNIEnv* env)
-	{
-		json localDtlsParameters = generateLocalDtlsParameters();
-		return NativeToJavaString(env, localDtlsParameters.dump());
-	}
+        static webrtc::ScopedJavaLocalRef<jstring>
+        JNI_Parameters_GenLocalDtlsParameters(JNIEnv *env) {
+            json localDtlsParameters = generateLocalDtlsParameters();
+            return webrtc::NativeToJavaString(env, localDtlsParameters.dump());
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenTransportRemoteParameters(JNIEnv* env)
-	{
-		json transportRemoteParameters = generateTransportRemoteParameters();
-		return NativeToJavaString(env, transportRemoteParameters.dump());
-	}
+        static webrtc::ScopedJavaLocalRef<jstring>
+        JNI_Parameters_GenTransportRemoteParameters(JNIEnv *env) {
+            json transportRemoteParameters = generateTransportRemoteParameters();
+            return webrtc::NativeToJavaString(env, transportRemoteParameters.dump());
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenProducerRemoteId(JNIEnv* env)
-	{
-		std::string producerRemoteId = generateProducerRemoteId();
-		return NativeToJavaString(env, producerRemoteId);
-	}
+        static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenProducerRemoteId(JNIEnv *env) {
+            std::string producerRemoteId = generateProducerRemoteId();
+            return webrtc::NativeToJavaString(env, producerRemoteId);
+        }
 
-	static ScopedJavaLocalRef<jstring> JNI_Parameters_GenConsumerRemoteParameters(
-	  JNIEnv* env, const JavaParamRef<jstring>& j_codecMimeType)
-	{
-		std::string codecMimeType     = JavaToNativeString(env, j_codecMimeType);
-		json consumerRemoteParameters = generateConsumerRemoteParameters(codecMimeType);
-		return NativeToJavaString(env, consumerRemoteParameters.dump());
-	}
+        static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenConsumerRemoteParameters(
+                JNIEnv *env, const webrtc::JavaParamRef<jstring> &j_codecMimeType) {
+            std::string codecMimeType = webrtc::JavaToNativeString(env, j_codecMimeType);
+            json consumerRemoteParameters = generateConsumerRemoteParameters(codecMimeType);
+            return webrtc::NativeToJavaString(env, consumerRemoteParameters.dump());
+        }
 
-} // namespace test
+    } // namespace test
 } // namespace mediasoupclient

@@ -5,9 +5,9 @@
 
 namespace mediasoupclient
 {
-static ScopedJavaLocalRef<jstring> JNI_MediasoupClient_Version(JNIEnv* env)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_MediasoupClient_Version(JNIEnv* env)
 {
 	std::string version = mediasoupclient::Version();
-	return NativeToJavaString(env, version);
+	return webrtc::NativeToJavaString(env, version);
 }
 } // namespace mediasoupclient

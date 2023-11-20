@@ -14,6 +14,8 @@
 #include <jni.h>
 
 #include "../include/jni_generator_helper.h"
+#include <sdk/android/src/jni/scoped_java_ref_counted.h>
+
 
 
 // Step 1: Forward declarations.
@@ -37,7 +39,7 @@ inline jclass org_mediasoup_droid_MediasoupClient_clazz(JNIEnv* env) {
 // Step 3: Method stubs.
 namespace mediasoupclient {
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_MediasoupClient_Version(JNIEnv* env);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_MediasoupClient_Version(JNIEnv* env);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_MediasoupClient_nativeVersion(
     JNIEnv* env,

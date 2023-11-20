@@ -4,13 +4,13 @@
 #include "Producer.hpp"
 #include "common_jni.h"
 #include <jni.h>
-
+#include <sdk/android/native_api/jni/scoped_java_ref.h>
 namespace mediasoupclient
 {
 class ProducerListenerJni final : public Producer::Listener
 {
 public:
-	ProducerListenerJni(JNIEnv* env, const JavaRef<jobject>& j_listener_);
+	ProducerListenerJni(JNIEnv* env, const webrtc::JavaRef<jobject>& j_listener_);
 
 	~ProducerListenerJni()
 	{
@@ -19,14 +19,14 @@ public:
 	void OnTransportClose(Producer* producer) override;
 
 public:
-	void SetJProducer(JNIEnv* env, const JavaRef<jobject>& j_producer)
+	void SetJProducer(JNIEnv* env, const webrtc::JavaRef<jobject>& j_producer)
 	{
-		j_producer_.Reset(j_producer);
+		j_producer_ = j_producer;
 	}
 
 private:
-	const ScopedJavaGlobalRef<jobject> j_listener_;
-	ScopedJavaGlobalRef<jobject> j_producer_;
+	const webrtc::ScopedJavaGlobalRef<jobject> j_listener_;
+	webrtc::ScopedJavaGlobalRef<jobject> j_producer_;
 };
 
 class OwnedProducer
@@ -53,7 +53,7 @@ private:
 	ProducerListenerJni* listener_;
 };
 
-ScopedJavaLocalRef<jobject> NativeToJavaProducer(
+	webrtc::ScopedJavaLocalRef<jobject> NativeToJavaProducer(
   JNIEnv* env, Producer* producer, ProducerListenerJni* listener);
 
 } // namespace mediasoupclient

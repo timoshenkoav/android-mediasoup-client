@@ -8,8 +8,8 @@
 
 namespace mediasoupclient
 {
-ProducerListenerJni::ProducerListenerJni(JNIEnv* env, const JavaRef<jobject>& j_listener_)
-  : j_listener_(j_listener_)
+ProducerListenerJni::ProducerListenerJni(JNIEnv* env, const webrtc::JavaRef<jobject>& j_listener_)
+  : j_listener_(env,j_listener_)
 {
 	MSC_TRACE();
 }
@@ -22,12 +22,12 @@ void ProducerListenerJni::OnTransportClose(Producer* producer)
 	Java_Listener_onTransportClose(env, j_listener_, j_producer_);
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Producer_GetId(JNIEnv* env, jlong j_producer)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Producer_GetId(JNIEnv* env, jlong j_producer)
 {
 	MSC_TRACE();
 
 	auto result = reinterpret_cast<OwnedProducer*>(j_producer)->producer()->GetId();
-	return NativeToJavaString(env, result);
+	return webrtc::NativeToJavaString(env, result);
 }
 
 static jboolean JNI_Producer_IsClosed(JNIEnv* env, jlong j_producer)
@@ -38,12 +38,12 @@ static jboolean JNI_Producer_IsClosed(JNIEnv* env, jlong j_producer)
 	return static_cast<jboolean>(result);
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Producer_GetKind(JNIEnv* env, jlong j_producer)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Producer_GetKind(JNIEnv* env, jlong j_producer)
 {
 	MSC_TRACE();
 
 	auto result = reinterpret_cast<OwnedProducer*>(j_producer)->producer()->GetKind();
-	return NativeToJavaString(env, result);
+	return webrtc::NativeToJavaString(env, result);
 }
 
 static jlong JNI_Producer_GetTrack(JNIEnv* env, jlong j_producer)
@@ -70,30 +70,30 @@ static jint JNI_Producer_GetMaxSpatialLayer(JNIEnv* env, jlong j_producer)
 	return result;
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Producer_GetAppData(JNIEnv* env, jlong j_producer)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Producer_GetAppData(JNIEnv* env, jlong j_producer)
 {
 	MSC_TRACE();
 
 	auto result = reinterpret_cast<OwnedProducer*>(j_producer)->producer()->GetAppData();
-	return NativeToJavaString(env, result.dump());
+	return webrtc::NativeToJavaString(env, result.dump());
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Producer_GetRtpParameters(JNIEnv* env, jlong j_producer)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Producer_GetRtpParameters(JNIEnv* env, jlong j_producer)
 {
 	MSC_TRACE();
 
 	auto result = reinterpret_cast<OwnedProducer*>(j_producer)->producer()->GetRtpParameters();
-	return NativeToJavaString(env, result.dump());
+	return webrtc::NativeToJavaString(env, result.dump());
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Producer_GetStats(JNIEnv* env, jlong j_producer)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Producer_GetStats(JNIEnv* env, jlong j_producer)
 {
 	MSC_TRACE();
 
 	try
 	{
 		auto result = reinterpret_cast<OwnedProducer*>(j_producer)->producer()->GetStats();
-		return NativeToJavaString(env, result.dump());
+		return webrtc::NativeToJavaString(env, result.dump());
 	}
 	catch (const std::exception& e)
 	{
@@ -157,13 +157,13 @@ static void JNI_Producer_Close(JNIEnv* env, jlong j_producer)
 	reinterpret_cast<OwnedProducer*>(j_producer)->producer()->Close();
 }
 
-ScopedJavaLocalRef<jobject> NativeToJavaProducer(
+    webrtc::ScopedJavaLocalRef<jobject> NativeToJavaProducer(
   JNIEnv* env, Producer* producer, ProducerListenerJni* listener)
 {
 	OwnedProducer* owned_producer = new OwnedProducer(producer, listener);
 	auto j_producer = Java_Producer_Constructor(env, webrtc::NativeToJavaPointer(owned_producer));
 	listener->SetJProducer(env, j_producer);
-	return ScopedJavaLocalRef<jobject>(env, j_producer.Release());
+	return webrtc::ScopedJavaLocalRef<jobject>(env, j_producer.Release());
 }
 
 } // namespace mediasoupclient

@@ -1,1 +1,0 @@
-../goma_ctl.py

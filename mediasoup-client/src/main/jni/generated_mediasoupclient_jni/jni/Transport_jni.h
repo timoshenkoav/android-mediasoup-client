@@ -51,88 +51,88 @@ inline jclass org_mediasoup_droid_Transport_00024Listener_clazz(JNIEnv* env) {
 // Step 3: Method stubs.
 namespace mediasoupclient {
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Transport_GetId(JNIEnv* env, const
-    base::android::JavaParamRef<jobject>& jcaller);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Transport_GetId(JNIEnv* env, const
+    webrtc::JavaParamRef<jobject>& jcaller);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Transport_nativeGetId(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_GetId(env, base::android::JavaParamRef<jobject>(env, jcaller)).Release();
+  return JNI_Transport_GetId(env, webrtc::JavaParamRef<jobject>(env, jcaller)).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Transport_GetConnectionState(JNIEnv* env,
-    const base::android::JavaParamRef<jobject>& jcaller);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Transport_GetConnectionState(JNIEnv* env,
+    const webrtc::JavaParamRef<jobject>& jcaller);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Transport_nativeGetConnectionState(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_GetConnectionState(env, base::android::JavaParamRef<jobject>(env,
+  return JNI_Transport_GetConnectionState(env, webrtc::JavaParamRef<jobject>(env,
       jcaller)).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Transport_GetAppData(JNIEnv* env, const
-    base::android::JavaParamRef<jobject>& jcaller);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Transport_GetAppData(JNIEnv* env, const
+    webrtc::JavaParamRef<jobject>& jcaller);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Transport_nativeGetAppData(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_GetAppData(env, base::android::JavaParamRef<jobject>(env,
+  return JNI_Transport_GetAppData(env, webrtc::JavaParamRef<jobject>(env,
       jcaller)).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Transport_GetStats(JNIEnv* env, const
-    base::android::JavaParamRef<jobject>& jcaller);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Transport_GetStats(JNIEnv* env, const
+    webrtc::JavaParamRef<jobject>& jcaller);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Transport_nativeGetStats(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_GetStats(env, base::android::JavaParamRef<jobject>(env, jcaller)).Release();
+  return JNI_Transport_GetStats(env, webrtc::JavaParamRef<jobject>(env, jcaller)).Release();
 }
 
-static jboolean JNI_Transport_IsClosed(JNIEnv* env, const base::android::JavaParamRef<jobject>&
+static jboolean JNI_Transport_IsClosed(JNIEnv* env, const webrtc::JavaParamRef<jobject>&
     jcaller);
 
 JNI_GENERATOR_EXPORT jboolean Java_org_mediasoup_droid_Transport_nativeIsClosed(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_IsClosed(env, base::android::JavaParamRef<jobject>(env, jcaller));
+  return JNI_Transport_IsClosed(env, webrtc::JavaParamRef<jobject>(env, jcaller));
 }
 
-static void JNI_Transport_RestartIce(JNIEnv* env, const base::android::JavaParamRef<jobject>&
+static void JNI_Transport_RestartIce(JNIEnv* env, const webrtc::JavaParamRef<jobject>&
     jcaller,
-    const base::android::JavaParamRef<jstring>& iceParameters);
+    const webrtc::JavaParamRef<jstring>& iceParameters);
 
 JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Transport_nativeRestartIce(
     JNIEnv* env,
     jobject jcaller,
     jstring iceParameters) {
-  return JNI_Transport_RestartIce(env, base::android::JavaParamRef<jobject>(env, jcaller),
-      base::android::JavaParamRef<jstring>(env, iceParameters));
+  return JNI_Transport_RestartIce(env, webrtc::JavaParamRef<jobject>(env, jcaller),
+      webrtc::JavaParamRef<jstring>(env, iceParameters));
 }
 
-static void JNI_Transport_UpdateIceServers(JNIEnv* env, const base::android::JavaParamRef<jobject>&
+static void JNI_Transport_UpdateIceServers(JNIEnv* env, const webrtc::JavaParamRef<jobject>&
     jcaller,
-    const base::android::JavaParamRef<jstring>& iceServers);
+    const webrtc::JavaParamRef<jstring>& iceServers);
 
 JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Transport_nativeUpdateIceServers(
     JNIEnv* env,
     jobject jcaller,
     jstring iceServers) {
-  return JNI_Transport_UpdateIceServers(env, base::android::JavaParamRef<jobject>(env, jcaller),
-      base::android::JavaParamRef<jstring>(env, iceServers));
+  return JNI_Transport_UpdateIceServers(env, webrtc::JavaParamRef<jobject>(env, jcaller),
+      webrtc::JavaParamRef<jstring>(env, iceServers));
 }
 
-static void JNI_Transport_Close(JNIEnv* env, const base::android::JavaParamRef<jobject>& jcaller);
+static void JNI_Transport_Close(JNIEnv* env, const webrtc::JavaParamRef<jobject>& jcaller);
 
 JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Transport_nativeClose(
     JNIEnv* env,
     jobject jcaller) {
-  return JNI_Transport_Close(env, base::android::JavaParamRef<jobject>(env, jcaller));
+  return JNI_Transport_Close(env, webrtc::JavaParamRef<jobject>(env, jcaller));
 }
 
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_Transport_getNativeTransport(nullptr);
-static jlong Java_Transport_getNativeTransport(JNIEnv* env, const base::android::JavaRef<jobject>&
+static jlong Java_Transport_getNativeTransport(JNIEnv* env, const webrtc::JavaRef<jobject>&
     obj) {
   jclass clazz = org_mediasoup_droid_Transport_clazz(env);
   CHECK_CLAZZ(env, obj.obj(),
@@ -140,7 +140,7 @@ static jlong Java_Transport_getNativeTransport(JNIEnv* env, const base::android:
 
   jni_generator::JniJavaCallContextChecked call_context;
   call_context.Init<
-      base::android::MethodID::TYPE_INSTANCE>(
+          base::android::MethodID::TYPE_INSTANCE>(
           env,
           clazz,
           "getNativeTransport",
@@ -154,16 +154,16 @@ static jlong Java_Transport_getNativeTransport(JNIEnv* env, const base::android:
 }
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_Transport_00024Listener_onConnect(nullptr);
-static void Java_Listener_onConnect(JNIEnv* env, const base::android::JavaRef<jobject>& obj, const
-    base::android::JavaRef<jobject>& transport,
-    const base::android::JavaRef<jstring>& dtlsParameters) {
+static void Java_Listener_onConnect(JNIEnv* env, const webrtc::JavaRef<jobject>& obj, const
+    webrtc::JavaRef<jobject>& transport,
+    const webrtc::JavaRef<jstring>& dtlsParameters) {
   jclass clazz = org_mediasoup_droid_Transport_00024Listener_clazz(env);
   CHECK_CLAZZ(env, obj.obj(),
       org_mediasoup_droid_Transport_00024Listener_clazz(env));
 
   jni_generator::JniJavaCallContextChecked call_context;
   call_context.Init<
-      base::android::MethodID::TYPE_INSTANCE>(
+          base::android::MethodID::TYPE_INSTANCE>(
           env,
           clazz,
           "onConnect",
@@ -177,15 +177,15 @@ static void Java_Listener_onConnect(JNIEnv* env, const base::android::JavaRef<jo
 static std::atomic<jmethodID>
     g_org_mediasoup_droid_Transport_00024Listener_onConnectionStateChange(nullptr);
 static void Java_Listener_onConnectionStateChange(JNIEnv* env, const
-    base::android::JavaRef<jobject>& obj, const base::android::JavaRef<jobject>& transport,
-    const base::android::JavaRef<jstring>& connectionState) {
+    webrtc::JavaRef<jobject>& obj, const webrtc::JavaRef<jobject>& transport,
+    const webrtc::JavaRef<jstring>& connectionState) {
   jclass clazz = org_mediasoup_droid_Transport_00024Listener_clazz(env);
   CHECK_CLAZZ(env, obj.obj(),
       org_mediasoup_droid_Transport_00024Listener_clazz(env));
 
   jni_generator::JniJavaCallContextChecked call_context;
   call_context.Init<
-      base::android::MethodID::TYPE_INSTANCE>(
+          base::android::MethodID::TYPE_INSTANCE>(
           env,
           clazz,
           "onConnectionStateChange",

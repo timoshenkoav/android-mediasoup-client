@@ -17,7 +17,6 @@
 #include <atomic>
 #include <jni.h>
 
-#include "include/scoped_java_ref.h"
 #include "sdk/android/native_api/jni/jni_int_wrapper.h"
 #include "rtc_base/checks.h"
 
@@ -72,11 +71,8 @@ namespace base
 {
 namespace android
 {
-	using mediasoupclient::JavaParamRef;
-	using mediasoupclient::JavaRef;
 	using mediasoupclient::LazyGetClass;
 	using mediasoupclient::MethodID;
-	using mediasoupclient::ScopedJavaLocalRef;
 
 } // namespace android
 } // namespace base

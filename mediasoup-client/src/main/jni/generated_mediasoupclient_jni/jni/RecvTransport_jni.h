@@ -14,7 +14,7 @@
 #include <jni.h>
 
 #include "../include/jni_generator_helper.h"
-
+#include <sdk/android/src/jni/scoped_java_ref_counted.h>
 
 // Step 1: Forward declarations.
 
@@ -25,7 +25,7 @@ JNI_REGISTRATION_EXPORT std::atomic<jclass> g_org_mediasoup_droid_RecvTransport_
 #ifndef org_mediasoup_droid_RecvTransport_clazz_defined
 #define org_mediasoup_droid_RecvTransport_clazz_defined
 inline jclass org_mediasoup_droid_RecvTransport_clazz(JNIEnv* env) {
-  return base::android::LazyGetClass(env, kClassPath_org_mediasoup_droid_RecvTransport,
+  return mediasoupclient::LazyGetClass(env, kClassPath_org_mediasoup_droid_RecvTransport,
       &g_org_mediasoup_droid_RecvTransport_clazz);
 }
 #endif
@@ -46,14 +46,14 @@ JNI_GENERATOR_EXPORT jlong Java_org_mediasoup_droid_RecvTransport_nativeGetNativ
   return JNI_RecvTransport_GetNativeTransport(env, transport);
 }
 
-static base::android::ScopedJavaLocalRef<jobject> JNI_RecvTransport_Consume(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> JNI_RecvTransport_Consume(JNIEnv* env, jlong
     transport,
-    const base::android::JavaParamRef<jobject>& listener,
-    const base::android::JavaParamRef<jstring>& id,
-    const base::android::JavaParamRef<jstring>& producerId,
-    const base::android::JavaParamRef<jstring>& kind,
-    const base::android::JavaParamRef<jstring>& rtpParameters,
-    const base::android::JavaParamRef<jstring>& appData);
+    const webrtc::JavaParamRef<jobject>& listener,
+    const webrtc::JavaParamRef<jstring>& id,
+    const webrtc::JavaParamRef<jstring>& producerId,
+    const webrtc::JavaParamRef<jstring>& kind,
+    const webrtc::JavaParamRef<jstring>& rtpParameters,
+    const webrtc::JavaParamRef<jstring>& appData);
 
 JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_RecvTransport_nativeConsume(
     JNIEnv* env,
@@ -65,11 +65,11 @@ JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_RecvTransport_nativeConsum
     jstring kind,
     jstring rtpParameters,
     jstring appData) {
-  return JNI_RecvTransport_Consume(env, transport, base::android::JavaParamRef<jobject>(env,
-      listener), base::android::JavaParamRef<jstring>(env, id),
-      base::android::JavaParamRef<jstring>(env, producerId),
-      base::android::JavaParamRef<jstring>(env, kind), base::android::JavaParamRef<jstring>(env,
-      rtpParameters), base::android::JavaParamRef<jstring>(env, appData)).Release();
+  return JNI_RecvTransport_Consume(env, transport, webrtc::JavaParamRef<jobject>(env,
+      listener), webrtc::JavaParamRef<jstring>(env, id),
+      webrtc::JavaParamRef<jstring>(env, producerId),
+      webrtc::JavaParamRef<jstring>(env, kind), webrtc::JavaParamRef<jstring>(env,
+      rtpParameters), webrtc::JavaParamRef<jstring>(env, appData)).Release();
 }
 
 static void JNI_RecvTransport_FreeTransport(JNIEnv* env, jlong transport);
@@ -83,7 +83,7 @@ JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_RecvTransport_nativeFreeTrans
 
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_RecvTransport_Constructor(nullptr);
-static base::android::ScopedJavaLocalRef<jobject> Java_RecvTransport_Constructor(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> Java_RecvTransport_Constructor(JNIEnv* env, jlong
     nativeTransport) {
   jclass clazz = org_mediasoup_droid_RecvTransport_clazz(env);
   CHECK_CLAZZ(env, clazz,
@@ -91,7 +91,7 @@ static base::android::ScopedJavaLocalRef<jobject> Java_RecvTransport_Constructor
 
   jni_generator::JniJavaCallContextChecked call_context;
   call_context.Init<
-      base::android::MethodID::TYPE_INSTANCE>(
+          base::android::MethodID::TYPE_INSTANCE>(
           env,
           clazz,
           "<init>",
@@ -101,7 +101,7 @@ static base::android::ScopedJavaLocalRef<jobject> Java_RecvTransport_Constructor
   jobject ret =
       env->NewObject(clazz,
           call_context.base.method_id, nativeTransport);
-  return base::android::ScopedJavaLocalRef<jobject>(env, ret);
+  return webrtc::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
 }  // namespace mediasoupclient

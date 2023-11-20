@@ -1,6 +1,17 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.19)
 
 project(mediasoupclient_so LANGUAGES CXX)
+
+set(CC_COMPILER "${ANDROID_TOOLCHAIN_ROOT}/bin/i686-linux-android${ANDROID_API_LEVEL}-clang")
+
+set(SUBCOMMAND_OPTS "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DHYDRA_PLATFORM=${HYDRA_PLATFORM} -DBUILD_TARGET=${BUILD_TARGET} -DBUILD_TYPE=${BUILD_TYPE} -Handroid -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION} -DANDROID_PLATFORM=${ANDROID_PLATFORM} -DANDROID_ABI=${ANDROID_ABI} -DCMAKE_ANDROID_ARCH_ABI=${CMAKE_ANDROID_ARCH_ABI}")
+
+# build config string for external projects based on CMake
+set(EXT_CMAKE_CFG              "CC=${CC_COMPILER}")
+set(EXT_CMAKE_CFG              "${EXT_CMAKE_CFG} -DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+
+include_directories(${CMAKE_ANDROID_NDK}/sources/android/cpufeatures)
+
 
 # Set version number.
 set(mediasoup_client_so_VERSION_MAJOR 3)
@@ -8,9 +19,9 @@ set(mediasoup_client_so_VERSION_MINOR 0)
 set(mediasoup_client_so_VERSION_PATCH 8)
 
 # C++ standard requirements.
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(CMAKE_CXX11_EXTENSION_COMPILE_OPTION "-std=c++17")
 set(
 	SOURCE_DIR
 	${mediasoupclient_so_SOURCE_DIR}/src/main/jni/
@@ -20,7 +31,6 @@ set(
 	SOURCE_FILES
 	${SOURCE_DIR}/jni_generator_helper.cpp
 	${SOURCE_DIR}/jni_onload.cpp
-	${SOURCE_DIR}/scoped_java_ref.cpp
 	${SOURCE_DIR}/java_types.cpp
 	${SOURCE_DIR}/consumer_jni.cpp
 	${SOURCE_DIR}/device_jni.cpp
@@ -58,8 +68,12 @@ add_subdirectory("deps/libmediasoupclient")
 # Add some compile flags to our source files.
 set_source_files_properties(${SOURCE_FILES}
 	PROPERTIES COMPILE_FLAGS -Wall -Wextra -Wpedantic)
-
-include_directories(SYSTEM "${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp")
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++21")
+include_directories(
+		SYSTEM
+		"${LIBWEBRTC_INCLUDE_PATH}/"
+		"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp/"
+)
 
 # Private (implementation) header files.
 target_include_directories(${PROJECT_NAME} PUBLIC

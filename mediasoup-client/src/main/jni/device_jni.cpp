@@ -29,13 +29,13 @@ static void JNI_Device_FreeDevice(JNIEnv* env, jlong j_device)
 }
 
 static void JNI_Device_Load(
-  JNIEnv* env, jlong j_device, const JavaParamRef<jstring>& j_routerRtpCapabilities)
+  JNIEnv* env, jlong j_device, const webrtc::JavaParamRef<jstring>& j_routerRtpCapabilities)
 {
 	MSC_TRACE();
 
 	try
 	{
-		auto capabilities = JavaToNativeString(env, j_routerRtpCapabilities);
+		auto capabilities = mediasoupclient::JavaToNativeString(env, j_routerRtpCapabilities);
 		reinterpret_cast<Device*>(j_device)->Load(json::parse(capabilities));
 	}
 	catch (const std::exception& e)
@@ -53,14 +53,14 @@ static jboolean JNI_Device_IsLoaded(JNIEnv* env, jlong j_device)
 	return static_cast<jboolean>(result);
 }
 
-static ScopedJavaLocalRef<jstring> JNI_Device_GetRtpCapabilities(JNIEnv* env, jlong j_device)
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Device_GetRtpCapabilities(JNIEnv* env, jlong j_device)
 {
 	MSC_TRACE();
 
 	try
 	{
 		auto rtpCap = reinterpret_cast<Device*>(j_device)->GetRtpCapabilities().dump();
-		return NativeToJavaString(env, rtpCap);
+		return webrtc::NativeToJavaString(env, rtpCap);
 	}
 	catch (const std::exception& e)
 	{
@@ -70,13 +70,13 @@ static ScopedJavaLocalRef<jstring> JNI_Device_GetRtpCapabilities(JNIEnv* env, jl
 	}
 }
 
-static jboolean JNI_Device_CanProduce(JNIEnv* env, jlong j_device, const JavaParamRef<jstring>& j_kind)
+static jboolean JNI_Device_CanProduce(JNIEnv* env, jlong j_device, const webrtc::JavaParamRef<jstring>& j_kind)
 {
 	MSC_TRACE();
 
 	try
 	{
-		std::string kind = JavaToNativeString(env, j_kind);
+		std::string kind = mediasoupclient::JavaToNativeString(env, j_kind);
 		auto result      = reinterpret_cast<Device*>(j_device)->CanProduce(kind);
 		return static_cast<jboolean>(result);
 	}
@@ -88,26 +88,26 @@ static jboolean JNI_Device_CanProduce(JNIEnv* env, jlong j_device, const JavaPar
 	}
 }
 
-static ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(
+static webrtc::ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(
   JNIEnv* env,
   jlong j_device,
-  const JavaParamRef<jobject>& j_listener,
-  const JavaParamRef<jstring>& j_id,
-  const JavaParamRef<jstring>& j_iceParameters,
-  const JavaParamRef<jstring>& j_iceCandidates,
-  const JavaParamRef<jstring>& j_dtlsParameters,
-  const JavaParamRef<jobject>& j_config,
+  const webrtc::JavaParamRef<jobject>& j_listener,
+  const webrtc::JavaParamRef<jstring>& j_id,
+  const webrtc::JavaParamRef<jstring>& j_iceParameters,
+  const webrtc::JavaParamRef<jstring>& j_iceCandidates,
+  const webrtc::JavaParamRef<jstring>& j_dtlsParameters,
+  const webrtc::JavaParamRef<jobject>& j_config,
   jlong j_peerConnection_factory,
-  const JavaParamRef<jstring>& j_appData)
+  const webrtc::JavaParamRef<jstring>& j_appData)
 {
 	MSC_TRACE();
 
 	try
 	{
 		auto listener       = new SendTransportListenerJni(env, j_listener);
-		auto iceParameters  = JavaToNativeString(env, j_iceParameters);
-		auto iceCandidates  = JavaToNativeString(env, j_iceCandidates);
-		auto dtlsParameters = JavaToNativeString(env, j_dtlsParameters);
+		auto iceParameters  = webrtc::JavaToNativeString(env, j_iceParameters);
+		auto iceCandidates  = webrtc::JavaToNativeString(env, j_iceCandidates);
+		auto dtlsParameters = webrtc::JavaToNativeString(env, j_dtlsParameters);
 
 		PeerConnection::Options options;
 		JavaToNativeOptions(env, j_config, j_peerConnection_factory, options);
@@ -115,12 +115,12 @@ static ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(
 		json appData = nlohmann::json::object();
 		if (!j_appData.is_null())
 		{
-			appData = json::parse(JavaToNativeString(env, j_appData));
+			appData = json::parse(mediasoupclient::JavaToNativeString(env, j_appData));
 		}
 
 		auto transport = reinterpret_cast<Device*>(j_device)->CreateSendTransport(
 		  listener,
-		  JavaToNativeString(env, j_id),
+		  mediasoupclient::JavaToNativeString(env, j_id),
 		  json::parse(iceParameters),
 		  json::parse(iceCandidates),
 		  json::parse(dtlsParameters),
@@ -136,39 +136,39 @@ static ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(
 	return nullptr;
 }
 
-static ScopedJavaLocalRef<jobject> JNI_Device_CreateRecvTransport(
+static webrtc::ScopedJavaLocalRef<jobject> JNI_Device_CreateRecvTransport(
   JNIEnv* env,
   jlong j_device,
-  const JavaParamRef<jobject>& j_listener,
-  const JavaParamRef<jstring>& j_id,
-  const JavaParamRef<jstring>& j_iceParameters,
-  const JavaParamRef<jstring>& j_iceCandidates,
-  const JavaParamRef<jstring>& j_dtlsParameters,
-  const JavaParamRef<jobject>& j_config,
+  const webrtc::JavaParamRef<jobject>& j_listener,
+  const webrtc::JavaParamRef<jstring>& j_id,
+  const webrtc::JavaParamRef<jstring>& j_iceParameters,
+  const webrtc::JavaParamRef<jstring>& j_iceCandidates,
+  const webrtc::JavaParamRef<jstring>& j_dtlsParameters,
+  const webrtc::JavaParamRef<jobject>& j_config,
   jlong j_peerConnection_factory,
-  const JavaParamRef<jstring>& j_appData)
+  const webrtc::JavaParamRef<jstring>& j_appData)
 {
 	MSC_TRACE();
 
 	try
 	{
 		auto listener       = new RecvTransportListenerJni(env, j_listener);
-		auto iceParameters  = JavaToNativeString(env, j_iceParameters);
-		auto iceCandidates  = JavaToNativeString(env, j_iceCandidates);
-		auto dtlsParameters = JavaToNativeString(env, j_dtlsParameters);
+		auto iceParameters  = webrtc::JavaToNativeString(env, j_iceParameters);
+		auto iceCandidates  = webrtc::JavaToNativeString(env, j_iceCandidates);
+		auto dtlsParameters = webrtc::JavaToNativeString(env, j_dtlsParameters);
 
 		PeerConnection::Options options;
 		JavaToNativeOptions(env, j_config, j_peerConnection_factory, options);
 
 		json appData = nlohmann::json::object();
-		if (j_appData != nullptr)
+		if (!j_appData.is_null())
 		{
-			appData = json::parse(JavaToNativeString(env, j_appData));
+			appData = json::parse(webrtc::JavaToNativeString(env, j_appData));
 		}
 
 		auto transport = reinterpret_cast<Device*>(j_device)->CreateRecvTransport(
 		  listener,
-		  JavaToNativeString(env, j_id),
+		  mediasoupclient::JavaToNativeString(env, j_id),
 		  json::parse(iceParameters),
 		  json::parse(iceCandidates),
 		  json::parse(dtlsParameters),

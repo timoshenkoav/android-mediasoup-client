@@ -1,7 +1,6 @@
 #ifndef MEDIASOUP_CLIENT_ANDROID_COMMON_JNI_H
 #define MEDIASOUP_CLIENT_ANDROID_COMMON_JNI_H
 
-#include "include/scoped_java_ref.h"
 #include <json.hpp>
 
 #define MEDIASOUP_CLIENT_EXCEPTION "org/mediasoup/droid/MediasoupException"

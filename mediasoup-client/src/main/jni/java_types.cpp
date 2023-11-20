@@ -2,25 +2,25 @@
 
 namespace mediasoupclient
 {
-ScopedJavaLocalRef<jstring> NativeToJavaString(JNIEnv* jni, const std::string& str)
+	webrtc::ScopedJavaLocalRef<jstring> NativeToJavaString(JNIEnv* jni, const std::string& str)
 {
 	auto j_str = webrtc::NativeToJavaString(jni, str);
-	return ScopedJavaLocalRef<jstring>(jni, j_str.Release());
+	return webrtc::ScopedJavaLocalRef<jstring>(jni, j_str.Release());
 }
 
-ScopedJavaLocalRef<jstring> NativeToJavaString(JNIEnv* jni, const absl::optional<std::string>& str)
+	webrtc::ScopedJavaLocalRef<jstring> NativeToJavaString(JNIEnv* jni, const absl::optional<std::string>& str)
 {
 	auto j_str = webrtc::NativeToJavaString(jni, str);
-	return ScopedJavaLocalRef<jstring>(jni, j_str.Release());
+	return webrtc::ScopedJavaLocalRef<jstring>(jni, j_str.Release());
 }
 
-std::string JavaToNativeString(JNIEnv* jni, const JavaRef<jstring>& j_string)
+std::string JavaToNativeString(JNIEnv* jni, const webrtc::JavaRef<jstring>& j_string)
 {
 	return webrtc::JavaToNativeString(jni, webrtc::JavaParamRef<jstring>(j_string.obj()));
 }
 
 void JavaToNativeOptions(
-  JNIEnv* env, const JavaRef<jobject>& configuration, jlong factory, PeerConnection::Options& options)
+  JNIEnv* env, const webrtc::JavaRef<jobject>& configuration, jlong factory, PeerConnection::Options& options)
 {
 	if (configuration.is_null())
 	{

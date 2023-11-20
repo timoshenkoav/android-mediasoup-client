@@ -14,7 +14,7 @@
 #include <jni.h>
 
 #include "../include/jni_generator_helper.h"
-
+#include <sdk/android/native_api/jni/scoped_java_ref.h>
 
 // Step 1: Forward declarations.
 
@@ -38,7 +38,7 @@ inline jclass org_mediasoup_droid_data_Parameters_clazz(JNIEnv* env) {
 namespace mediasoupclient {
 namespace test {
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Parameters_GenRouterRtpCapabilities(JNIEnv*
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenRouterRtpCapabilities(JNIEnv*
     env);
 
 JNI_GENERATOR_EXPORT jstring
@@ -48,9 +48,9 @@ JNI_GENERATOR_EXPORT jstring
   return JNI_Parameters_GenRouterRtpCapabilities(env).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring>
+static webrtc::ScopedJavaLocalRef<jstring>
     JNI_Parameters_GenRouterRtpCapabilitiesExclude(JNIEnv* env, const
-    base::android::JavaParamRef<jstring>& exclude);
+    webrtc::JavaParamRef<jstring>& exclude);
 
 JNI_GENERATOR_EXPORT jstring
     Java_org_mediasoup_droid_data_Parameters_nativeGenRouterRtpCapabilitiesExclude(
@@ -58,10 +58,10 @@ JNI_GENERATOR_EXPORT jstring
     jclass jcaller,
     jstring exclude) {
   return JNI_Parameters_GenRouterRtpCapabilitiesExclude(env,
-      base::android::JavaParamRef<jstring>(env, exclude)).Release();
+      webrtc::JavaParamRef<jstring>(env, exclude)).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Parameters_GenRtpParametersByKind(JNIEnv*
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenRtpParametersByKind(JNIEnv*
     env);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenRtpParametersByKind(
@@ -70,7 +70,7 @@ JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenR
   return JNI_Parameters_GenRtpParametersByKind(env).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Parameters_GenLocalDtlsParameters(JNIEnv*
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenLocalDtlsParameters(JNIEnv*
     env);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenLocalDtlsParameters(
@@ -79,7 +79,7 @@ JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenL
   return JNI_Parameters_GenLocalDtlsParameters(env).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring>
+static webrtc::ScopedJavaLocalRef<jstring>
     JNI_Parameters_GenTransportRemoteParameters(JNIEnv* env);
 
 JNI_GENERATOR_EXPORT jstring
@@ -89,7 +89,7 @@ JNI_GENERATOR_EXPORT jstring
   return JNI_Parameters_GenTransportRemoteParameters(env).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Parameters_GenProducerRemoteId(JNIEnv* env);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenProducerRemoteId(JNIEnv* env);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenProducerRemoteId(
     JNIEnv* env,
@@ -97,15 +97,15 @@ JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_data_Parameters_nativeGenP
   return JNI_Parameters_GenProducerRemoteId(env).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Parameters_GenConsumerRemoteParameters(JNIEnv*
-    env, const base::android::JavaParamRef<jstring>& codecMimeType);
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Parameters_GenConsumerRemoteParameters(JNIEnv*
+    env, const webrtc::JavaParamRef<jstring>& codecMimeType);
 
 JNI_GENERATOR_EXPORT jstring
     Java_org_mediasoup_droid_data_Parameters_nativeGenConsumerRemoteParameters(
     JNIEnv* env,
     jclass jcaller,
     jstring codecMimeType) {
-  return JNI_Parameters_GenConsumerRemoteParameters(env, base::android::JavaParamRef<jstring>(env,
+  return JNI_Parameters_GenConsumerRemoteParameters(env, webrtc::JavaParamRef<jstring>(env,
       codecMimeType)).Release();
 }
 

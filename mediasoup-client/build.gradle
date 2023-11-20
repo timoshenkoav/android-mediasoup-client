@@ -8,7 +8,7 @@ def WEBRTC_LIB_PATH = "${projectDir}/deps/webrtc/lib/"
 
 android {
     compileSdkVersion 32
-
+    ndkVersion '26.1.10909125'
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 32
@@ -19,6 +19,7 @@ android {
 
         externalNativeBuild {
             cmake {
+                version '3.22.1'
                 // Passes optional arguments to CMake.
                 arguments "-DLIBWEBRTC_INCLUDE_PATH=" + WEBRTC_INC_PATH,
                         "-DLIBWEBRTC_BINARY_PATH=" + WEBRTC_LIB_PATH,
@@ -28,7 +29,7 @@ android {
                         "-DMEDIASOUPCLIENT_LOG_TRACE=ON",
                         "-DMEDIASOUPCLIENT_LOG_DEV=ON",
                         "-DANDROID_STL=c++_static"
-                cppFlags "-Wl,--build-id -g"
+                cppFlags "-Wl,--build-id -g -DDEBUG -std=c++17 "
             }
         }
 

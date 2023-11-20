@@ -23,41 +23,47 @@ const char kClassPath_org_mediasoup_droid_Logger[] = "org/mediasoup/droid/Logger
 
 JNI_REGISTRATION_EXPORT extern const char kClassPath_org_mediasoup_droid_Logger_00024LogLevel[];
 const char kClassPath_org_mediasoup_droid_Logger_00024LogLevel[] =
-    "org/mediasoup/droid/Logger$LogLevel";
+        "org/mediasoup/droid/Logger$LogLevel";
 
 JNI_REGISTRATION_EXPORT extern const char
-    kClassPath_org_mediasoup_droid_Logger_00024LogHandlerInterface[];
+        kClassPath_org_mediasoup_droid_Logger_00024LogHandlerInterface[];
 const char kClassPath_org_mediasoup_droid_Logger_00024LogHandlerInterface[] =
-    "org/mediasoup/droid/Logger$LogHandlerInterface";
+        "org/mediasoup/droid/Logger$LogHandlerInterface";
 // Leaking this jclass as we cannot use LazyInstance from some threads.
 JNI_REGISTRATION_EXPORT std::atomic<jclass> g_org_mediasoup_droid_Logger_clazz(nullptr);
 #ifndef org_mediasoup_droid_Logger_clazz_defined
 #define org_mediasoup_droid_Logger_clazz_defined
-inline jclass org_mediasoup_droid_Logger_clazz(JNIEnv* env) {
-  return base::android::LazyGetClass(env, kClassPath_org_mediasoup_droid_Logger,
-      &g_org_mediasoup_droid_Logger_clazz);
+
+inline jclass org_mediasoup_droid_Logger_clazz(JNIEnv *env) {
+    return base::android::LazyGetClass(env, kClassPath_org_mediasoup_droid_Logger,
+                                       &g_org_mediasoup_droid_Logger_clazz);
 }
+
 #endif
 // Leaking this jclass as we cannot use LazyInstance from some threads.
 JNI_REGISTRATION_EXPORT std::atomic<jclass>
-    g_org_mediasoup_droid_Logger_00024LogLevel_clazz(nullptr);
+        g_org_mediasoup_droid_Logger_00024LogLevel_clazz(nullptr);
 #ifndef org_mediasoup_droid_Logger_00024LogLevel_clazz_defined
 #define org_mediasoup_droid_Logger_00024LogLevel_clazz_defined
-inline jclass org_mediasoup_droid_Logger_00024LogLevel_clazz(JNIEnv* env) {
-  return base::android::LazyGetClass(env, kClassPath_org_mediasoup_droid_Logger_00024LogLevel,
-      &g_org_mediasoup_droid_Logger_00024LogLevel_clazz);
+
+inline jclass org_mediasoup_droid_Logger_00024LogLevel_clazz(JNIEnv *env) {
+    return base::android::LazyGetClass(env, kClassPath_org_mediasoup_droid_Logger_00024LogLevel,
+                                       &g_org_mediasoup_droid_Logger_00024LogLevel_clazz);
 }
+
 #endif
 // Leaking this jclass as we cannot use LazyInstance from some threads.
 JNI_REGISTRATION_EXPORT std::atomic<jclass>
-    g_org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(nullptr);
+        g_org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(nullptr);
 #ifndef org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz_defined
 #define org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz_defined
-inline jclass org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(JNIEnv* env) {
-  return base::android::LazyGetClass(env,
-      kClassPath_org_mediasoup_droid_Logger_00024LogHandlerInterface,
-      &g_org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz);
+
+inline jclass org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(JNIEnv *env) {
+    return base::android::LazyGetClass(env,
+                                       kClassPath_org_mediasoup_droid_Logger_00024LogHandlerInterface,
+                                       &g_org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz);
 }
+
 #endif
 
 
@@ -67,78 +73,81 @@ inline jclass org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(JNIEnv* 
 // Step 3: Method stubs.
 namespace mediasoupclient {
 
-static void JNI_Logger_SetLogLevel(JNIEnv* env, jint level);
+    static void JNI_Logger_SetLogLevel(JNIEnv *env, jint level);
 
-JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Logger_nativeSetLogLevel(
-    JNIEnv* env,
-    jclass jcaller,
-    jint level) {
-  return JNI_Logger_SetLogLevel(env, level);
-}
+    JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Logger_nativeSetLogLevel(
+            JNIEnv *env,
+            jclass jcaller,
+            jint level) {
+        return JNI_Logger_SetLogLevel(env, level);
+    }
 
-static jlong JNI_Logger_SetHandler(JNIEnv* env, const base::android::JavaParamRef<jobject>&
+    static jlong JNI_Logger_SetHandler(JNIEnv *env, const webrtc::JavaParamRef<jobject> &
     handler);
 
-JNI_GENERATOR_EXPORT jlong Java_org_mediasoup_droid_Logger_nativeSetHandler(
-    JNIEnv* env,
-    jclass jcaller,
-    jobject handler) {
-  return JNI_Logger_SetHandler(env, base::android::JavaParamRef<jobject>(env, handler));
-}
+    JNI_GENERATOR_EXPORT jlong Java_org_mediasoup_droid_Logger_nativeSetHandler(
+            JNIEnv *env,
+            jclass jcaller,
+            jobject handler) {
+        return JNI_Logger_SetHandler(env, webrtc::JavaParamRef<jobject>(env, handler));
+    }
 
-static void JNI_Logger_FreeLogHandler(JNIEnv* env, jlong handler);
+    static void JNI_Logger_FreeLogHandler(JNIEnv *env, jlong handler);
 
-JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Logger_nativeFreeLogHandler(
-    JNIEnv* env,
-    jclass jcaller,
-    jlong handler) {
-  return JNI_Logger_FreeLogHandler(env, handler);
-}
+    JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Logger_nativeFreeLogHandler(
+            JNIEnv *env,
+            jclass jcaller,
+            jlong handler) {
+        return JNI_Logger_FreeLogHandler(env, handler);
+    }
 
 
-static std::atomic<jmethodID> g_org_mediasoup_droid_Logger_00024LogLevel_getLogLevel(nullptr);
-static base::android::ScopedJavaLocalRef<jobject> Java_LogLevel_getLogLevel(JNIEnv* env,
-    JniIntWrapper level) {
-  jclass clazz = org_mediasoup_droid_Logger_00024LogLevel_clazz(env);
-  CHECK_CLAZZ(env, clazz,
-      org_mediasoup_droid_Logger_00024LogLevel_clazz(env), NULL);
+    static std::atomic<jmethodID> g_org_mediasoup_droid_Logger_00024LogLevel_getLogLevel(nullptr);
 
-  jni_generator::JniJavaCallContextChecked call_context;
-  call_context.Init<
-      base::android::MethodID::TYPE_STATIC>(
-          env,
-          clazz,
-          "getLogLevel",
-          "(I)Lorg/mediasoup/droid/Logger$LogLevel;",
-          &g_org_mediasoup_droid_Logger_00024LogLevel_getLogLevel);
+    static webrtc::ScopedJavaLocalRef<jobject> Java_LogLevel_getLogLevel(JNIEnv *env,
+                                                                         JniIntWrapper level) {
+        jclass clazz = org_mediasoup_droid_Logger_00024LogLevel_clazz(env);
+        CHECK_CLAZZ(env, clazz,
+                    org_mediasoup_droid_Logger_00024LogLevel_clazz(env), NULL);
 
-  jobject ret =
-      env->CallStaticObjectMethod(clazz,
-          call_context.base.method_id, as_jint(level));
-  return base::android::ScopedJavaLocalRef<jobject>(env, ret);
-}
+        jni_generator::JniJavaCallContextChecked call_context;
+        call_context.Init<
+                base::android::MethodID::TYPE_STATIC>(
+                env,
+                clazz,
+                "getLogLevel",
+                "(I)Lorg/mediasoup/droid/Logger$LogLevel;",
+                &g_org_mediasoup_droid_Logger_00024LogLevel_getLogLevel);
 
-static std::atomic<jmethodID> g_org_mediasoup_droid_Logger_00024LogHandlerInterface_OnLog(nullptr);
-static void Java_LogHandlerInterface_OnLog(JNIEnv* env, const base::android::JavaRef<jobject>& obj,
-    const base::android::JavaRef<jobject>& logLevel,
-    const base::android::JavaRef<jstring>& tag,
-    const base::android::JavaRef<jstring>& message) {
-  jclass clazz = org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(env);
-  CHECK_CLAZZ(env, obj.obj(),
-      org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(env));
+        jobject ret =
+                env->CallStaticObjectMethod(clazz,
+                                            call_context.base.method_id, as_jint(level));
+        return webrtc::ScopedJavaLocalRef<jobject>(env, ret);
+    }
 
-  jni_generator::JniJavaCallContextChecked call_context;
-  call_context.Init<
-      base::android::MethodID::TYPE_INSTANCE>(
-          env,
-          clazz,
-          "OnLog",
-          "(Lorg/mediasoup/droid/Logger$LogLevel;Ljava/lang/String;Ljava/lang/String;)V",
-          &g_org_mediasoup_droid_Logger_00024LogHandlerInterface_OnLog);
+    static std::atomic<jmethodID> g_org_mediasoup_droid_Logger_00024LogHandlerInterface_OnLog(
+            nullptr);
 
-     env->CallVoidMethod(obj.obj(),
-          call_context.base.method_id, logLevel.obj(), tag.obj(), message.obj());
-}
+    static void Java_LogHandlerInterface_OnLog(JNIEnv *env, const webrtc::JavaRef<jobject> &obj,
+                                               const webrtc::JavaRef<jobject> &logLevel,
+                                               const webrtc::JavaRef<jstring> &tag,
+                                               const webrtc::JavaRef<jstring> &message) {
+        jclass clazz = org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(env);
+        CHECK_CLAZZ(env, obj.obj(),
+                    org_mediasoup_droid_Logger_00024LogHandlerInterface_clazz(env));
+
+        jni_generator::JniJavaCallContextChecked call_context;
+        call_context.Init<
+                base::android::MethodID::TYPE_INSTANCE>(
+                env,
+                clazz,
+                "OnLog",
+                "(Lorg/mediasoup/droid/Logger$LogLevel;Ljava/lang/String;Ljava/lang/String;)V",
+                &g_org_mediasoup_droid_Logger_00024LogHandlerInterface_OnLog);
+
+        env->CallVoidMethod(obj.obj(),
+                            call_context.base.method_id, logLevel.obj(), tag.obj(), message.obj());
+    }
 
 }  // namespace mediasoupclient
 

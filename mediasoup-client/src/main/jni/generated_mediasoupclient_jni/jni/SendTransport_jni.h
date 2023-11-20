@@ -14,7 +14,7 @@
 #include <jni.h>
 
 #include "../include/jni_generator_helper.h"
-
+#include <sdk/android/src/jni/scoped_java_ref_counted.h>
 
 // Step 1: Forward declarations.
 
@@ -63,13 +63,13 @@ JNI_GENERATOR_EXPORT jlong Java_org_mediasoup_droid_SendTransport_nativeGetNativ
   return JNI_SendTransport_GetNativeTransport(env, transport);
 }
 
-static base::android::ScopedJavaLocalRef<jobject> JNI_SendTransport_Produce(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> JNI_SendTransport_Produce(JNIEnv* env, jlong
     transport,
-    const base::android::JavaParamRef<jobject>& listener,
+    const webrtc::JavaParamRef<jobject>& listener,
     jlong track,
-    const base::android::JavaParamRef<jobjectArray>& encodings,
-    const base::android::JavaParamRef<jstring>& codecOptions,
-    const base::android::JavaParamRef<jstring>& appData);
+    const webrtc::JavaParamRef<jobjectArray>& encodings,
+    const webrtc::JavaParamRef<jstring>& codecOptions,
+    const webrtc::JavaParamRef<jstring>& appData);
 
 JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_SendTransport_nativeProduce(
     JNIEnv* env,
@@ -80,10 +80,10 @@ JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_SendTransport_nativeProduc
     jobjectArray encodings,
     jstring codecOptions,
     jstring appData) {
-  return JNI_SendTransport_Produce(env, transport, base::android::JavaParamRef<jobject>(env,
-      listener), track, base::android::JavaParamRef<jobjectArray>(env, encodings),
-      base::android::JavaParamRef<jstring>(env, codecOptions),
-      base::android::JavaParamRef<jstring>(env, appData)).Release();
+  return JNI_SendTransport_Produce(env, transport, webrtc::JavaParamRef<jobject>(env,
+      listener), track, webrtc::JavaParamRef<jobjectArray>(env, encodings),
+      webrtc::JavaParamRef<jstring>(env, codecOptions),
+      webrtc::JavaParamRef<jstring>(env, appData)).Release();
 }
 
 static void JNI_SendTransport_FreeTransport(JNIEnv* env, jlong transport);
@@ -105,11 +105,11 @@ JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_SendTransport_nativeCloseTran
 
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_SendTransport_00024Listener_onProduce(nullptr);
-static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduce(JNIEnv* env, const
-    base::android::JavaRef<jobject>& obj, const base::android::JavaRef<jobject>& transport,
-    const base::android::JavaRef<jstring>& kind,
-    const base::android::JavaRef<jstring>& rtpParameters,
-    const base::android::JavaRef<jstring>& appData) {
+static webrtc::ScopedJavaLocalRef<jstring> Java_Listener_onProduce(JNIEnv* env, const
+    webrtc::JavaRef<jobject>& obj, const webrtc::JavaRef<jobject>& transport,
+    const webrtc::JavaRef<jstring>& kind,
+    const webrtc::JavaRef<jstring>& rtpParameters,
+    const webrtc::JavaRef<jstring>& appData) {
   jclass clazz = org_mediasoup_droid_SendTransport_00024Listener_clazz(env);
   CHECK_CLAZZ(env, obj.obj(),
       org_mediasoup_droid_SendTransport_00024Listener_clazz(env), NULL);
@@ -127,17 +127,17 @@ static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduce(JNIEnv
       static_cast<jstring>(env->CallObjectMethod(obj.obj(),
           call_context.base.method_id, transport.obj(), kind.obj(), rtpParameters.obj(),
               appData.obj()));
-  return base::android::ScopedJavaLocalRef<jstring>(env, ret);
+  return webrtc::ScopedJavaLocalRef<jstring>(env, ret);
 }
 
 static std::atomic<jmethodID>
     g_org_mediasoup_droid_SendTransport_00024Listener_onProduceData(nullptr);
-static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduceData(JNIEnv* env, const
-    base::android::JavaRef<jobject>& obj, const base::android::JavaRef<jobject>& transport,
-    const base::android::JavaRef<jstring>& label,
-    const base::android::JavaRef<jstring>& protocol,
-    const base::android::JavaRef<jstring>& rtpParameters,
-    const base::android::JavaRef<jstring>& appData) {
+static webrtc::ScopedJavaLocalRef<jstring> Java_Listener_onProduceData(JNIEnv* env, const
+    webrtc::JavaRef<jobject>& obj, const webrtc::JavaRef<jobject>& transport,
+    const webrtc::JavaRef<jstring>& label,
+    const webrtc::JavaRef<jstring>& protocol,
+    const webrtc::JavaRef<jstring>& rtpParameters,
+    const webrtc::JavaRef<jstring>& appData) {
   jclass clazz = org_mediasoup_droid_SendTransport_00024Listener_clazz(env);
   CHECK_CLAZZ(env, obj.obj(),
       org_mediasoup_droid_SendTransport_00024Listener_clazz(env), NULL);
@@ -155,11 +155,11 @@ static base::android::ScopedJavaLocalRef<jstring> Java_Listener_onProduceData(JN
       static_cast<jstring>(env->CallObjectMethod(obj.obj(),
           call_context.base.method_id, transport.obj(), label.obj(), protocol.obj(),
               rtpParameters.obj(), appData.obj()));
-  return base::android::ScopedJavaLocalRef<jstring>(env, ret);
+  return webrtc::ScopedJavaLocalRef<jstring>(env, ret);
 }
 
 static std::atomic<jmethodID> g_org_mediasoup_droid_SendTransport_Constructor(nullptr);
-static base::android::ScopedJavaLocalRef<jobject> Java_SendTransport_Constructor(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> Java_SendTransport_Constructor(JNIEnv* env, jlong
     nativeTransport) {
   jclass clazz = org_mediasoup_droid_SendTransport_clazz(env);
   CHECK_CLAZZ(env, clazz,
@@ -177,7 +177,7 @@ static base::android::ScopedJavaLocalRef<jobject> Java_SendTransport_Constructor
   jobject ret =
       env->NewObject(clazz,
           call_context.base.method_id, nativeTransport);
-  return base::android::ScopedJavaLocalRef<jobject>(env, ret);
+  return webrtc::ScopedJavaLocalRef<jobject>(env, ret);
 }
 
 }  // namespace mediasoupclient

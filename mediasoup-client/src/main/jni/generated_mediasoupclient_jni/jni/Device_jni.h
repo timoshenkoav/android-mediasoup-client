@@ -14,7 +14,7 @@
 #include <jni.h>
 
 #include "../include/jni_generator_helper.h"
-
+#include <sdk/android/native_api/jni/scoped_java_ref.h>
 
 // Step 1: Forward declarations.
 
@@ -54,15 +54,14 @@ JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Device_nativeFreeDevice(
   return JNI_Device_FreeDevice(env, device);
 }
 
-static void JNI_Device_Load(JNIEnv* env, jlong device,
-    const base::android::JavaParamRef<jstring>& routerRtpCapabilities);
+static void JNI_Device_Load(JNIEnv* env, jlong device, const webrtc::JavaParamRef<jstring>& routerRtpCapabilities);
 
 JNI_GENERATOR_EXPORT void Java_org_mediasoup_droid_Device_nativeLoad(
     JNIEnv* env,
     jclass jcaller,
     jlong device,
     jstring routerRtpCapabilities) {
-  return JNI_Device_Load(env, device, base::android::JavaParamRef<jstring>(env,
+  return JNI_Device_Load(env, device, webrtc::JavaParamRef<jstring>(env,
       routerRtpCapabilities));
 }
 
@@ -75,7 +74,7 @@ JNI_GENERATOR_EXPORT jboolean Java_org_mediasoup_droid_Device_nativeIsLoaded(
   return JNI_Device_IsLoaded(env, device);
 }
 
-static base::android::ScopedJavaLocalRef<jstring> JNI_Device_GetRtpCapabilities(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jstring> JNI_Device_GetRtpCapabilities(JNIEnv* env, jlong
     device);
 
 JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Device_nativeGetRtpCapabilities(
@@ -86,26 +85,26 @@ JNI_GENERATOR_EXPORT jstring Java_org_mediasoup_droid_Device_nativeGetRtpCapabil
 }
 
 static jboolean JNI_Device_CanProduce(JNIEnv* env, jlong device,
-    const base::android::JavaParamRef<jstring>& kind);
+    const webrtc::JavaParamRef<jstring>& kind);
 
 JNI_GENERATOR_EXPORT jboolean Java_org_mediasoup_droid_Device_nativeCanProduce(
     JNIEnv* env,
     jclass jcaller,
     jlong device,
     jstring kind) {
-  return JNI_Device_CanProduce(env, device, base::android::JavaParamRef<jstring>(env, kind));
+  return JNI_Device_CanProduce(env, device, webrtc::JavaParamRef<jstring>(env, kind));
 }
 
-static base::android::ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> JNI_Device_CreateSendTransport(JNIEnv* env, jlong
     device,
-    const base::android::JavaParamRef<jobject>& listener,
-    const base::android::JavaParamRef<jstring>& id,
-    const base::android::JavaParamRef<jstring>& iceParameters,
-    const base::android::JavaParamRef<jstring>& iceCandidates,
-    const base::android::JavaParamRef<jstring>& dtlsParameters,
-    const base::android::JavaParamRef<jobject>& configuration,
+    const webrtc::JavaParamRef<jobject>& listener,
+    const webrtc::JavaParamRef<jstring>& id,
+    const webrtc::JavaParamRef<jstring>& iceParameters,
+    const webrtc::JavaParamRef<jstring>& iceCandidates,
+    const webrtc::JavaParamRef<jstring>& dtlsParameters,
+    const webrtc::JavaParamRef<jobject>& configuration,
     jlong peerConnectionFactory,
-    const base::android::JavaParamRef<jstring>& appData);
+    const webrtc::JavaParamRef<jstring>& appData);
 
 JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_Device_nativeCreateSendTransport(
     JNIEnv* env,
@@ -119,25 +118,25 @@ JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_Device_nativeCreateSendTra
     jobject configuration,
     jlong peerConnectionFactory,
     jstring appData) {
-  return JNI_Device_CreateSendTransport(env, device, base::android::JavaParamRef<jobject>(env,
-      listener), base::android::JavaParamRef<jstring>(env, id),
-      base::android::JavaParamRef<jstring>(env, iceParameters),
-      base::android::JavaParamRef<jstring>(env, iceCandidates),
-      base::android::JavaParamRef<jstring>(env, dtlsParameters),
-      base::android::JavaParamRef<jobject>(env, configuration), peerConnectionFactory,
-      base::android::JavaParamRef<jstring>(env, appData)).Release();
+  return JNI_Device_CreateSendTransport(env, device, webrtc::JavaParamRef<jobject>(env,
+      listener), webrtc::JavaParamRef<jstring>(env, id),
+      webrtc::JavaParamRef<jstring>(env, iceParameters),
+      webrtc::JavaParamRef<jstring>(env, iceCandidates),
+      webrtc::JavaParamRef<jstring>(env, dtlsParameters),
+      webrtc::JavaParamRef<jobject>(env, configuration), peerConnectionFactory,
+      webrtc::JavaParamRef<jstring>(env, appData)).Release();
 }
 
-static base::android::ScopedJavaLocalRef<jobject> JNI_Device_CreateRecvTransport(JNIEnv* env, jlong
+static webrtc::ScopedJavaLocalRef<jobject> JNI_Device_CreateRecvTransport(JNIEnv* env, jlong
     device,
-    const base::android::JavaParamRef<jobject>& listener,
-    const base::android::JavaParamRef<jstring>& id,
-    const base::android::JavaParamRef<jstring>& iceParameters,
-    const base::android::JavaParamRef<jstring>& iceCandidates,
-    const base::android::JavaParamRef<jstring>& dtlsParameters,
-    const base::android::JavaParamRef<jobject>& configuration,
+    const webrtc::JavaParamRef<jobject>& listener,
+    const webrtc::JavaParamRef<jstring>& id,
+    const webrtc::JavaParamRef<jstring>& iceParameters,
+    const webrtc::JavaParamRef<jstring>& iceCandidates,
+    const webrtc::JavaParamRef<jstring>& dtlsParameters,
+    const webrtc::JavaParamRef<jobject>& configuration,
     jlong peerConnectionFactory,
-    const base::android::JavaParamRef<jstring>& appData);
+    const webrtc::JavaParamRef<jstring>& appData);
 
 JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_Device_nativeCreateRecvTransport(
     JNIEnv* env,
@@ -151,13 +150,13 @@ JNI_GENERATOR_EXPORT jobject Java_org_mediasoup_droid_Device_nativeCreateRecvTra
     jobject configuration,
     jlong peerConnectionFactory,
     jstring appData) {
-  return JNI_Device_CreateRecvTransport(env, device, base::android::JavaParamRef<jobject>(env,
-      listener), base::android::JavaParamRef<jstring>(env, id),
-      base::android::JavaParamRef<jstring>(env, iceParameters),
-      base::android::JavaParamRef<jstring>(env, iceCandidates),
-      base::android::JavaParamRef<jstring>(env, dtlsParameters),
-      base::android::JavaParamRef<jobject>(env, configuration), peerConnectionFactory,
-      base::android::JavaParamRef<jstring>(env, appData)).Release();
+  return JNI_Device_CreateRecvTransport(env, device, webrtc::JavaParamRef<jobject>(env,
+      listener), webrtc::JavaParamRef<jstring>(env, id),
+      webrtc::JavaParamRef<jstring>(env, iceParameters),
+      webrtc::JavaParamRef<jstring>(env, iceCandidates),
+      webrtc::JavaParamRef<jstring>(env, dtlsParameters),
+      webrtc::JavaParamRef<jobject>(env, configuration), peerConnectionFactory,
+      webrtc::JavaParamRef<jstring>(env, appData)).Release();
 }
 
 

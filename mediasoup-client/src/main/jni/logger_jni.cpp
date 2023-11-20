@@ -10,9 +10,9 @@ namespace mediasoupclient
 class LogHandlerInterfaceJNI : public Logger::LogHandlerInterface
 {
 public:
-	LogHandlerInterfaceJNI(JNIEnv* env, const JavaParamRef<jobject>& j_handler_interface)
+	LogHandlerInterfaceJNI(JNIEnv* env, const  webrtc::JavaParamRef<jobject>& j_handler_interface)
 	  : j_handler_interface_(env, j_handler_interface),
-	    jni_tag_(env, webrtc::NativeToJavaString(env, TAG).obj())
+	    jni_tag_(env, webrtc::JavaParamRef<jstring>(webrtc::NativeToJavaString(env, TAG).obj()))
 	{
 		assert(!j_handler_interface_.is_null());
 	}
@@ -25,12 +25,12 @@ public:
 		auto j_level   = Java_LogLevel_getLogLevel(env, static_cast<int>(level));
 		auto j_message = webrtc::NativeToJavaString(env, message);
 		Java_LogHandlerInterface_OnLog(
-		  env, j_handler_interface_, j_level, jni_tag_, JavaParamRef<jstring>(env, j_message.obj()));
+		  env, j_handler_interface_, j_level, jni_tag_, webrtc::JavaParamRef<jstring>(env, j_message.obj()));
 	}
 
 private:
-	ScopedJavaGlobalRef<jobject> j_handler_interface_;
-	ScopedJavaGlobalRef<jstring> jni_tag_;
+	webrtc::ScopedJavaGlobalRef<jobject> j_handler_interface_;
+	webrtc::ScopedJavaGlobalRef<jstring> jni_tag_;
 };
 
 static void JNI_Logger_SetLogLevel(JNIEnv* env, jint j_level)
@@ -38,7 +38,7 @@ static void JNI_Logger_SetLogLevel(JNIEnv* env, jint j_level)
 	Logger::SetLogLevel(static_cast<Logger::LogLevel>(j_level));
 }
 
-static jlong JNI_Logger_SetHandler(JNIEnv* env, const JavaParamRef<jobject>& j_handler)
+static jlong JNI_Logger_SetHandler(JNIEnv* env, const webrtc::JavaParamRef<jobject>& j_handler)
 {
 	auto* handler = new LogHandlerInterfaceJNI(env, j_handler);
 	Logger::SetHandler(reinterpret_cast<Logger::LogHandlerInterface*>(handler));

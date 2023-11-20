@@ -4,14 +4,14 @@
 #include "Transport.hpp"
 #include "common_jni.h"
 #include <jni.h>
-
+#include <sdk/android/src/jni/scoped_java_ref_counted.h>
 namespace mediasoupclient
 {
 class SendTransportListenerJni final : public SendTransport::Listener
 {
 public:
-	SendTransportListenerJni(JNIEnv* env, const JavaRef<jobject>& j_listener)
-	  : j_listener_(j_listener)
+	SendTransportListenerJni(JNIEnv* env, const webrtc::JavaRef<jobject>& j_listener)
+	  : j_listener_(env, j_listener)
 	{
 	}
 
@@ -29,21 +29,20 @@ public:
 			const json& appData) override;
 
 public:
-	void SetJTransport(JNIEnv* env, const JavaRef<jobject>& j_transport)
+	void SetJTransport(JNIEnv* env, const webrtc::JavaRef<jobject>& j_transport)
 	{
-		j_transport_.Reset(j_transport);
+		j_transport_ = j_transport;
 	}
 
 private:
-	const ScopedJavaGlobalRef<jobject> j_listener_;
-	ScopedJavaGlobalRef<jobject> j_transport_;
+	const webrtc::ScopedJavaGlobalRef<jobject> j_listener_;
+	webrtc::ScopedJavaGlobalRef<jobject> j_transport_;
 };
 
 class RecvTransportListenerJni final : public RecvTransport::Listener
 {
 public:
-	RecvTransportListenerJni(JNIEnv* env, const JavaRef<jobject>& j_listener)
-	  : j_listener_(j_listener)
+	RecvTransportListenerJni(JNIEnv* env, const webrtc::JavaRef<jobject>& j_listener): j_listener_(env, j_listener)
 	{
 	}
 
@@ -52,14 +51,14 @@ public:
 	void OnConnectionStateChange(Transport* transport, const std::string& connectionState) override;
 
 public:
-	void SetJTransport(JNIEnv* env, const JavaRef<jobject>& j_transport)
+	void SetJTransport(JNIEnv* env, const webrtc::JavaRef<jobject>& j_transport)
 	{
-		j_transport_.Reset(j_transport);
+		j_transport_ = j_transport;
 	}
 
 private:
-	const ScopedJavaGlobalRef<jobject> j_listener_;
-	ScopedJavaGlobalRef<jobject> j_transport_;
+	const webrtc::ScopedJavaGlobalRef<jobject> j_listener_;
+	webrtc::ScopedJavaGlobalRef<jobject> j_transport_;
 };
 
 class OwnedSendTransport
@@ -110,10 +109,10 @@ private:
 	RecvTransportListenerJni* listener_;
 };
 
-ScopedJavaLocalRef<jobject> NativeToJavaSendTransport(
+	webrtc::ScopedJavaLocalRef<jobject> NativeToJavaSendTransport(
   JNIEnv* env, SendTransport* transport, SendTransportListenerJni* listener);
 
-ScopedJavaLocalRef<jobject> NativeToJavaRecvTransport(
+	webrtc::ScopedJavaLocalRef<jobject> NativeToJavaRecvTransport(
   JNIEnv* env, RecvTransport* transport, RecvTransportListenerJni* listener);
 
 } // namespace mediasoupclient
